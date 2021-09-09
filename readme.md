@@ -14,15 +14,15 @@ Container, InitContainer를 모두 감시합니다.
 
 # Available Environment Flags
 ```go
-	kubeconfig               = *flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	offDeployments           = *flag.Bool("off-deployments", false, "disable deployments")
-	offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
-	offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
-	offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-	imageHashCacheTTLSec     = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
-	imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
-	controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
-	controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
+kubeconfig               = *flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+offDeployments           = *flag.Bool("off-deployments", false, "disable deployments")
+offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
+offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
+offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
+imageHashCacheTTLSec     = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
+imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
+controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
+controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
 ```
 
 # 동작 방식
