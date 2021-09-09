@@ -4,21 +4,23 @@ import (
 	"github.com/pubg/kube-image-deployer/controller"
 	"github.com/pubg/kube-image-deployer/interfaces"
 	pkgRuntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
+type ApplyStrategicMergePatch = controller.ApplyStrategicMergePatch
+
 func NewWatcher(
 	name string,
 	stop chan struct{},
-	clientset *kubernetes.Clientset,
 	listWatcher cache.ListerWatcher,
 	objType pkgRuntime.Object,
 	imageNotifier interfaces.IImageNotifier,
 	controllerWatchKey string,
+	applyStrategicMergePatch ApplyStrategicMergePatch,
 ) {
-	NewWatcherWithController(stop, createDefaultController(name, stop, clientset, listWatcher, objType, imageNotifier, controllerWatchKey))
+	controller := createDefaultController(name, stop, listWatcher, objType, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+	NewWatcherWithController(stop, controller)
 }
 
 func NewWatcherWithController(
@@ -32,11 +34,11 @@ func NewWatcherWithController(
 func createDefaultController(
 	name string,
 	stop chan struct{},
-	clientset *kubernetes.Clientset,
 	listWatcher cache.ListerWatcher,
 	objType pkgRuntime.Object,
 	imageNotifier interfaces.IImageNotifier,
 	controllerWatchKey string,
+	applyStrategicMergePatch ApplyStrategicMergePatch,
 ) *controller.Controller {
 
 	// create the workqueue
@@ -69,7 +71,18 @@ func createDefaultController(
 		},
 	}, cache.Indexers{})
 
-	controller := controller.NewController(name, clientset, objType, queue, indexer, informer, imageNotifier, controllerWatchKey)
+	controllerOpt := controller.ControllerOpt{
+		Resource:                 name,
+		ObjType:                  objType,
+		ApplyStrategicMergePatch: applyStrategicMergePatch,
+		Queue:                    queue,
+		Indexer:                  indexer,
+		Informer:                 informer,
+		ImageNotifier:            imageNotifier,
+		ControllerWatchKey:       controllerWatchKey,
+	}
+
+	controller := controller.NewController(controllerOpt)
 
 	return controller
 

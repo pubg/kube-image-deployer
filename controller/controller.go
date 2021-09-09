@@ -11,20 +11,19 @@ import (
 	pkgRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
 // Controller demonstrates how to implement a controller with client-go.
 type Controller struct {
-	resource      string
-	clientset     *kubernetes.Clientset
-	objType       pkgRuntime.Object
-	indexer       cache.Indexer
-	queue         workqueue.RateLimitingInterface
-	informer      cache.Controller
-	imageNotifier interfaces.IImageNotifier
+	resource                 string
+	objType                  pkgRuntime.Object
+	indexer                  cache.Indexer
+	queue                    workqueue.RateLimitingInterface
+	informer                 cache.Controller
+	imageNotifier            interfaces.IImageNotifier
+	applyStrategicMergePatch ApplyStrategicMergePatch
 
 	syncedImages      map[Image]bool
 	syncedImagesMutex sync.RWMutex
@@ -35,30 +34,32 @@ type Controller struct {
 	watchKey string
 }
 
+type ApplyStrategicMergePatch func(namespace, name string, data []byte) error
+
+type ControllerOpt struct {
+	Resource                 string
+	ObjType                  pkgRuntime.Object
+	Indexer                  cache.Indexer
+	Informer                 cache.Controller
+	Queue                    workqueue.RateLimitingInterface
+	ImageNotifier            interfaces.IImageNotifier
+	ApplyStrategicMergePatch ApplyStrategicMergePatch
+	ControllerWatchKey       string
+}
+
 // NewController creates a new Controller.
-func NewController(
-	name string,
-	clientset *kubernetes.Clientset,
-	objType pkgRuntime.Object,
-	queue workqueue.RateLimitingInterface,
-	indexer cache.Indexer,
-	informer cache.Controller,
-	imageNotifier interfaces.IImageNotifier,
-	watchKey string,
-) *Controller {
+func NewController(opt ControllerOpt) *Controller {
 	return &Controller{
-		resource:      name,
-		clientset:     clientset,
-		objType:       objType,
-		informer:      informer,
-		indexer:       indexer,
-		queue:         queue,
-		imageNotifier: imageNotifier,
-		watchKey:      watchKey,
-
-		syncedImages:      make(map[Image]bool),
-		syncedImagesMutex: sync.RWMutex{},
-
+		resource:                   opt.Resource,
+		objType:                    opt.ObjType,
+		indexer:                    opt.Indexer,
+		informer:                   opt.Informer,
+		queue:                      opt.Queue,
+		imageNotifier:              opt.ImageNotifier,
+		applyStrategicMergePatch:   opt.ApplyStrategicMergePatch,
+		watchKey:                   opt.ControllerWatchKey,
+		syncedImages:               make(map[Image]bool),
+		syncedImagesMutex:          sync.RWMutex{},
 		imageUpdateNotifyList:      make([]imageUpdateNotify, 0),
 		imageUpdateNotifyListMutex: sync.RWMutex{},
 	}

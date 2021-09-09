@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"os/signal"
@@ -14,6 +15,7 @@ import (
 	appV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
@@ -83,19 +85,35 @@ func runWatchers(stopCh chan struct{}) {
 	}
 
 	if !offDeployments { // deployments watcher
-		go watcher.NewWatcher("deployments", stopCh, clientset, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "deployments", controllerWatchNamespace, optionsModifier), &appV1.Deployment{}, imageNotifier, controllerWatchKey)
+		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
+			_, err := clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			return err
+		}
+		go watcher.NewWatcher("deployments", stopCh, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "deployments", controllerWatchNamespace, optionsModifier), &appV1.Deployment{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 
 	if !offStatefulsets { // statefulsets watcher
-		go watcher.NewWatcher("statefulsets", stopCh, clientset, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "statefulsets", controllerWatchNamespace, optionsModifier), &appV1.StatefulSet{}, imageNotifier, controllerWatchKey)
+		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
+			_, err := clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			return err
+		}
+		go watcher.NewWatcher("statefulsets", stopCh, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "statefulsets", controllerWatchNamespace, optionsModifier), &appV1.StatefulSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 
 	if !offDaemonsets { // daemonsets watcher
-		go watcher.NewWatcher("daemonsets", stopCh, clientset, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "daemonsets", controllerWatchNamespace, optionsModifier), &appV1.DaemonSet{}, imageNotifier, controllerWatchKey)
+		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
+			_, err := clientset.AppsV1().DaemonSets(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			return err
+		}
+		go watcher.NewWatcher("daemonsets", stopCh, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "daemonsets", controllerWatchNamespace, optionsModifier), &appV1.DaemonSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 
 	if !offCronjobs { // cronjobs watcher
-		go watcher.NewWatcher("cronjobs", stopCh, clientset, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey)
+		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
+			_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			return err
+		}
+		go watcher.NewWatcher("cronjobs", stopCh, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 }
 

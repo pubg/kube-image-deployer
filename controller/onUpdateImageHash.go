@@ -1,14 +1,11 @@
 package controller
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/pubg/kube-image-deployer/util"
 	v1 "k8s.io/api/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -142,7 +139,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 		return fmt.Errorf("[%s] OnUpdateImageHash patch marshal error %+v, err=%s", c.resource, patchList, err)
 	}
 
-	if _, err := c.clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, []byte(patchString), metaV1.PatchOptions{}); err != nil {
+	if err := c.applyStrategicMergePatch(namespace, name, patchString); err != nil {
 		return fmt.Errorf("[%s] OnUpdateImageHash patch apply error namespace=%s, name=%s, patchString=%s, err=%s", c.resource, namespace, name, patchString, err)
 	}
 
