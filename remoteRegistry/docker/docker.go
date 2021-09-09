@@ -28,6 +28,15 @@ func NewRemoteRegistry(imageAuthMap map[string]authn.Keychain, cacheTTL uint) in
 
 // GetImage returns a docker image digest hash from url:tag
 func (d *RemoteRegistryDocker) GetImageString(url, tag string) (string, error) {
+	// *을 포함하는 경우 전체 tag에서 가장 높은 tag를 찾아 반환해야 한다. - unimplemented yet
+	if strings.Contains(tag, "*") {
+		return url + ":" + tag, nil
+	} else { // 단일 tag인 경우 가장 최신 sha256 digest를 반환한다.
+		return d.getImageDigestHash(url, tag)
+	}
+}
+
+func (d *RemoteRegistryDocker) getImageDigestHash(url, tag string) (string, error) {
 
 	fullUrl := fmt.Sprintf("%s:%s", url, tag)
 	authKeyChain := d.getAuthKeyChain(url)
@@ -49,7 +58,8 @@ func (d *RemoteRegistryDocker) GetImageString(url, tag string) (string, error) {
 		}
 	})
 
-	return hash.(string), err
+	return url + "@" + hash.(string), err
+
 }
 
 func (d *RemoteRegistryDocker) getAuthKeyChain(url string) authn.Keychain {

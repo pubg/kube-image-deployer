@@ -108,14 +108,11 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 				return fmt.Errorf("[%s] OnUpdateImageString patch error key=%s, containerName=%s, err=%s", c.resource, key, patch.containerName, err)
 			}
 
-			// container 이미지 Hash 설정
-			image := patch.url + "@" + patch.imageString
-
 			// 이미지 변경 체크
-			if currentContainer.Image != image {
+			if currentContainer.Image != patch.imageString {
 				container := Container{
 					Name:  patch.containerName,
-					Image: image,
+					Image: patch.imageString,
 				}
 				if isInitContainer {
 					InitContainers = append(InitContainers, container)
