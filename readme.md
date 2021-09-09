@@ -19,7 +19,7 @@ offDeployments           = *flag.Bool("off-deployments", false, "disable deploym
 offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
 offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
 offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-imageHashCacheTTLSec     = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
+imageStringCacheTTLSec     = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
 imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
 controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
 controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
@@ -28,7 +28,7 @@ controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "contr
 # 동작 방식
 * kube-image-deployer label을 가진 Workload를 감시 대상으로 등록 합니다.
 * Workload의 annotation을 읽어 감시할 Image와 Container를 매핑합니다.
-* 1분 간격(imageHashCacheTTLSec)으로 Docker Hub / Harbor 에서 Image:Tag의 Hash를 획득해 해당 Image:Tag를 사용하는 감시 대상 Workload의 Container에 Strategic Merge Patch를 진행합니다.
+* 1분 간격(imageStringCacheTTLSec)으로 Docker Hub / Harbor 에서 Image:Tag의 Hash를 획득해 해당 Image:Tag를 사용하는 감시 대상 Workload의 Container에 Strategic Merge Patch를 진행합니다.
 
 # Kubernetes Yaml Examples
 ## Yaml 필수 구성 요소

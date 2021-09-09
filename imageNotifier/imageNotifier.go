@@ -84,13 +84,13 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 }
 
 func (r *ImageNotifier) checkImageUpdate(image checkImage) {
-	imageHash, err := r.remoteRegistry.GetImageHash(image.url, image.tag)
+	imageString, err := r.remoteRegistry.GetImageString(image.url, image.tag)
 	if err != nil {
 		klog.Errorf("[%s] checkImageUpdate %s:%s err=%s\n", image.controller.GetReresourceName(), image.url, image.tag, err)
 		return
 	}
 
-	image.controller.OnUpdateImageHash(image.url, image.tag, imageHash)
+	image.controller.OnUpdateImageString(image.url, image.tag, imageString)
 }
 
 type checkImage struct {

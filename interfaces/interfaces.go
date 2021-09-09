@@ -2,7 +2,7 @@ package interfaces
 
 type IController interface {
 	Run(workers int, stopCh chan struct{})
-	OnUpdateImageHash(url, tag, imageHash string)
+	OnUpdateImageString(url, tag, imageString string)
 	GetReresourceName() string
 }
 
@@ -12,5 +12,5 @@ type IImageNotifier interface {
 }
 
 type IRemoteRegistry interface {
-	GetImageHash(url, tag string) (string, error)
+	GetImageString(url, tag string) (string, error)
 }

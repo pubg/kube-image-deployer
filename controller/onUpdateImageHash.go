@@ -14,13 +14,13 @@ type patch struct {
 	containerName string
 	url           string
 	tag           string
-	imageHash     string
+	imageString   string
 }
 
 type imageUpdateNotify struct {
-	url       string
-	tag       string
-	imageHash string
+	url         string
+	tag         string
+	imageString string
 }
 
 type Container struct {
@@ -44,7 +44,7 @@ func (c *Controller) getPatchMapByUpdates(updates []imageUpdateNotify) map[strin
 	patchMap := make(map[string][]patch)
 
 	for _, update := range updates {
-		klog.V(2).Infof("[%s] OnUpdateImageHash %s, %s, %s", c.resource, update.url, update.tag, update.imageHash)
+		klog.V(2).Infof("[%s] OnUpdateImageString %s, %s, %s", c.resource, update.url, update.tag, update.imageString)
 
 		c.syncedImagesMutex.RLock()
 		defer c.syncedImagesMutex.RUnlock()
@@ -64,7 +64,7 @@ func (c *Controller) getPatchMapByUpdates(updates []imageUpdateNotify) map[strin
 				containerName: image.containerName,
 				url:           update.url,
 				tag:           update.tag,
-				imageHash:     update.imageHash,
+				imageString:   update.imageString,
 			})
 
 		}
@@ -81,19 +81,19 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 	namespace, name := util.GetNamespaceNameByKey(key)
 
 	if namespace == "" || name == "" {
-		return fmt.Errorf("[%s] OnUpdateImageHash patch invalid key=%s", c.resource, key)
+		return fmt.Errorf("[%s] OnUpdateImageString patch invalid key=%s", c.resource, key)
 	}
 
 	obj, exists, err := c.indexer.GetByKey(key)
 	if err != nil {
-		return fmt.Errorf("[%s] OnUpdateImageHash patch error key=%s err=%s", c.resource, key, err)
+		return fmt.Errorf("[%s] OnUpdateImageString patch error key=%s err=%s", c.resource, key, err)
 	}
 
 	for _, patch := range patchList {
-		klog.V(2).Infof("[%s] OnUpdateImageHash patch %+v", c.resource, patch)
+		klog.V(2).Infof("[%s] OnUpdateImageString patch %+v", c.resource, patch)
 
 		if !exists { // 삭제된 리소스인 경우 무시
-			return fmt.Errorf("[%s] OnUpdateImageHash patch not exists key=%s", c.resource, key)
+			return fmt.Errorf("[%s] OnUpdateImageString patch not exists key=%s", c.resource, key)
 		} else { // 이미지 업데이트
 
 			var currentContainer v1.Container
@@ -105,11 +105,11 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 				currentContainer = find // initContainer에서 찾음
 				isInitContainer = true
 			} else { // 컨테이너 이름을 찾지 못함
-				return fmt.Errorf("[%s] OnUpdateImageHash patch error key=%s, containerName=%s, err=%s", c.resource, key, patch.containerName, err)
+				return fmt.Errorf("[%s] OnUpdateImageString patch error key=%s, containerName=%s, err=%s", c.resource, key, patch.containerName, err)
 			}
 
 			// container 이미지 Hash 설정
-			image := patch.url + "@" + patch.imageHash
+			image := patch.url + "@" + patch.imageString
 
 			// 이미지 변경 체크
 			if currentContainer.Image != image {
@@ -127,7 +127,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 	}
 
 	if len(Containers) == 0 && len(InitContainers) == 0 { // 변경된 이미지가 없는 경우 무시
-		klog.V(2).Infof("[%s] OnUpdateImageHash patch containers not changed %+v", c.resource, patchList)
+		klog.V(2).Infof("[%s] OnUpdateImageString patch containers not changed %+v", c.resource, patchList)
 		return nil
 	}
 
@@ -136,25 +136,25 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 	patchString, err := json.Marshal(imageStrategicPatch)
 
 	if err != nil {
-		return fmt.Errorf("[%s] OnUpdateImageHash patch marshal error %+v, err=%s", c.resource, patchList, err)
+		return fmt.Errorf("[%s] OnUpdateImageString patch marshal error %+v, err=%s", c.resource, patchList, err)
 	}
 
 	if err := c.applyStrategicMergePatch(namespace, name, patchString); err != nil {
-		return fmt.Errorf("[%s] OnUpdateImageHash patch apply error namespace=%s, name=%s, patchString=%s, err=%s", c.resource, namespace, name, patchString, err)
+		return fmt.Errorf("[%s] OnUpdateImageString patch apply error namespace=%s, name=%s, patchString=%s, err=%s", c.resource, namespace, name, patchString, err)
 	}
 
-	klog.Warningf("[%s] OnUpdateImageHash patch apply success namespace=%s, name=%s, patchString=%s", c.resource, namespace, name, patchString)
+	klog.Warningf("[%s] OnUpdateImageString patch apply success namespace=%s, name=%s, patchString=%s", c.resource, namespace, name, patchString)
 	return nil
 
 }
 
-// OnUpdateImageHash is a controller function that is called when an image hash is updated
-func (c *Controller) OnUpdateImageHash(url, tag, imageHash string) {
+// OnUpdateImageString is a controller function that is called when an image hash is updated
+func (c *Controller) OnUpdateImageString(url, tag, imageString string) {
 
 	notify := imageUpdateNotify{
-		url:       url,
-		tag:       tag,
-		imageHash: imageHash,
+		url:         url,
+		tag:         tag,
+		imageString: imageString,
 	}
 
 	c.imageUpdateNotifyListMutex.Lock()

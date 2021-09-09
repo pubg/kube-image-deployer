@@ -27,7 +27,7 @@ func NewRemoteRegistry(imageAuthMap map[string]authn.Keychain, cacheTTL uint) in
 }
 
 // GetImage returns a docker image digest hash from url:tag
-func (d *RemoteRegistryDocker) GetImageHash(url, tag string) (string, error) {
+func (d *RemoteRegistryDocker) GetImageString(url, tag string) (string, error) {
 
 	fullUrl := fmt.Sprintf("%s:%s", url, tag)
 	authKeyChain := d.getAuthKeyChain(url)

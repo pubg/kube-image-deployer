@@ -28,7 +28,7 @@ var (
 	offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
 	offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
 	offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-	imageHashCacheTTLSec     = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
+	imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
 	imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
 	controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
 	controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
@@ -45,7 +45,7 @@ func init() {
 		"offStatefulsets":          offStatefulsets,
 		"offDaemonsets":            offDaemonsets,
 		"offCronjobs":              offCronjobs,
-		"imageHashCacheTTLSec":     imageHashCacheTTLSec,
+		"imageStringCacheTTLSec":   imageStringCacheTTLSec,
 		"imageCheckIntervalSec":    imageCheckIntervalSec,
 		"controllerWatchKey":       controllerWatchKey,
 		"controllerWatchNamespace": controllerWatchNamespace,
@@ -77,10 +77,10 @@ func NewClientset() *kubernetes.Clientset {
 }
 
 func runWatchers(stopCh chan struct{}) {
-	clientset := NewClientset()                                                                       // create a clientset
-	remoteRegistry := docker.NewRemoteRegistry(make(map[string]authn.Keychain), imageHashCacheTTLSec) // create a docker remote registry
-	imageNotifier := imageNotifier.NewImageNotifier(stopCh, remoteRegistry, imageCheckIntervalSec)    // create a imageNotifier
-	optionsModifier := func(options *metaV1.ListOptions) {                                            // optionsModifier selector
+	clientset := NewClientset()                                                                         // create a clientset
+	remoteRegistry := docker.NewRemoteRegistry(make(map[string]authn.Keychain), imageStringCacheTTLSec) // create a docker remote registry
+	imageNotifier := imageNotifier.NewImageNotifier(stopCh, remoteRegistry, imageCheckIntervalSec)      // create a imageNotifier
+	optionsModifier := func(options *metaV1.ListOptions) {                                              // optionsModifier selector
 		options.LabelSelector = controllerWatchKey
 	}
 
