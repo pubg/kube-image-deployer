@@ -1,7 +1,7 @@
 package imageNotifier
 
 import (
-	"sync"
+	"sync/atomic"
 
 	"github.com/pubg/kube-image-deployer/interfaces"
 )
@@ -11,8 +11,7 @@ type ImageUpdateNotify struct {
 	tag            string
 	hash           string
 	controller     interfaces.IController
-	referenceCount int
-	mutex          *sync.RWMutex
+	referenceCount int32
 }
 
 func NewImageUpdateNotify(url, tag, hash string, controller interfaces.IController) *ImageUpdateNotify {
@@ -22,26 +21,13 @@ func NewImageUpdateNotify(url, tag, hash string, controller interfaces.IControll
 		hash:           hash,
 		controller:     controller,
 		referenceCount: 1,
-		mutex:          &sync.RWMutex{},
 	}
 }
 
-func (u *ImageUpdateNotify) Get() (url, tag, hash string) {
-	u.mutex.RLock()
-	defer u.mutex.RUnlock()
-	return u.url, u.tag, u.hash
+func (u *ImageUpdateNotify) addReferenceCount() int32 {
+	return atomic.AddInt32(&u.referenceCount, 1)
 }
 
-func (u *ImageUpdateNotify) addReferenceCount() int {
-	u.mutex.Lock()
-	defer u.mutex.Unlock()
-	u.referenceCount++
-	return u.referenceCount
-}
-
-func (u *ImageUpdateNotify) subReferenceCount() int {
-	u.mutex.Lock()
-	defer u.mutex.Unlock()
-	u.referenceCount--
-	return u.referenceCount
+func (u *ImageUpdateNotify) subReferenceCount() int32 {
+	return atomic.AddInt32(&u.referenceCount, -1)
 }

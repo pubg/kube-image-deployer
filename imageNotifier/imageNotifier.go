@@ -103,21 +103,19 @@ func (r *ImageNotifier) checkAllImageNotifyList() {
 
 	// dump all checkList
 	checkList := func() []checkImage {
-		checkList := make([]checkImage, 0)
+		list := make([]checkImage, 0)
 		r.mutex.RLock()
-		defer r.mutex.RUnlock()
 		for _, imageUpdateNotify := range r.list {
 			if imageUpdateNotify != nil {
-				imageUpdateNotify.mutex.Lock()
-				checkList = append(checkList, checkImage{
+				list = append(list, checkImage{
 					controller: imageUpdateNotify.controller,
 					url:        imageUpdateNotify.url,
 					tag:        imageUpdateNotify.tag,
 				})
-				imageUpdateNotify.mutex.Unlock()
 			}
 		}
-		return checkList
+		r.mutex.RUnlock()
+		return list
 	}()
 
 	for _, check := range checkList {
