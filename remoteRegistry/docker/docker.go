@@ -28,10 +28,11 @@ func NewRemoteRegistry(imageAuthMap map[string]authn.Keychain, cacheTTL uint) in
 
 // GetImage returns a docker image digest hash from url:tag
 func (d *RemoteRegistryDocker) GetImageString(url, tag string) (string, error) {
-	// *을 포함하는 경우 전체 tag에서 가장 높은 tag를 찾아 반환해야 한다. - unimplemented yet
 	if strings.Contains(tag, "*") {
-		return url + ":" + tag, nil
-	} else { // 단일 tag인 경우 가장 최신 sha256 digest를 반환한다.
+		// *을 포함하는 경우 전체 tag에서 가장 높은 tag를 찾아 반환한다.
+		return d.getImageHighestVersionTag(url, tag)
+	} else {
+		// 단일 tag인 경우 가장 최신 sha256 digest를 반환한다.
 		return d.getImageDigestHash(url, tag)
 	}
 }
@@ -72,4 +73,34 @@ func (d *RemoteRegistryDocker) getAuthKeyChain(url string) authn.Keychain {
 
 	return authn.DefaultKeychain
 
+}
+
+func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag string) (string, error) {
+	authKeyChain := d.getAuthKeyChain(url)
+	repo, err := name.NewRepository(url)
+	if nil != err {
+		return "", err
+	}
+
+	cacheKey := url + "___" + tag
+	target, err := d.cache.Get(cacheKey, func() (interface{}, error) {
+		tags, err := remote.List(repo, remote.WithAuthFromKeychain(authKeyChain))
+		if nil != err {
+			return "", err
+		}
+
+		t, err := util.GetHighestVersionWithFilter(tags, tag)
+		if nil != err {
+			return "", err
+		}
+
+		return t, nil
+	})
+	if nil != err {
+		return "", err
+	}
+
+	fullUrl := fmt.Sprintf("%s:%s", url, target.(string))
+
+	return fullUrl, nil
 }
