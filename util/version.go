@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ func GetHighestVersionWithFilter(versions []string, filter string) (string, erro
 	targetTag := ""
 	targetVer := int64(0)
 
-	patt, err := regexp.Compile(strings.Replace(regexp.QuoteMeta(filter), "\\*", "(\\d+)", 1))
+	patt, err := regexp.Compile(fmt.Sprintf("^%s$", strings.Replace(regexp.QuoteMeta(filter), "\\*", "(\\d+)", 1)))
 	if nil != err {
 		return "", err
 	}
