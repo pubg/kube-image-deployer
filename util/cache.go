@@ -27,13 +27,11 @@ func NewCache(ttlSeconds uint) *Cache {
 
 func (c *Cache) Get(key string, getter func() (interface{}, error)) (interface{}, error) {
 	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	if res, ok := c.cache[key]; ok && time.Since(res.time) < time.Duration(c.TTL)*time.Second {
-		c.mutex.Unlock()
 		return res.value, res.err
 	}
-
-	c.mutex.Unlock()
 
 	value, err := getter()
 	res := cacheResult{
@@ -42,10 +40,8 @@ func (c *Cache) Get(key string, getter func() (interface{}, error)) (interface{}
 		time:  time.Now(),
 	}
 
-	c.mutex.Lock()
 	c.cache[key] = res
-	c.mutex.Unlock()
-
+	
 	return res.value, res.err
 
 }
