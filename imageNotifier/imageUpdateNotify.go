@@ -9,16 +9,16 @@ import (
 type ImageUpdateNotify struct {
 	url            string
 	tag            string
-	hash           string
+	platform       string
 	controller     interfaces.IController
 	referenceCount int32
 }
 
-func NewImageUpdateNotify(url, tag, hash string, controller interfaces.IController) *ImageUpdateNotify {
+func NewImageUpdateNotify(url, tag, platform string, controller interfaces.IController) *ImageUpdateNotify {
 	return &ImageUpdateNotify{
 		url:            url,
 		tag:            tag,
-		hash:           hash,
+		platform:       platform,
 		controller:     controller,
 		referenceCount: 1,
 	}

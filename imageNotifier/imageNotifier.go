@@ -10,9 +10,10 @@ import (
 )
 
 type ImageNotifierId struct {
-	controller interfaces.IController
-	url        string
-	tag        string
+	controller     interfaces.IController
+	url            string
+	tag            string
+	platformString string // "", "linux/amd64", "linux/386", "linux/arm32", "linux/arm32v7" ...
 }
 
 type ImageNotifier struct {
@@ -37,9 +38,9 @@ func NewImageNotifier(stopCh chan struct{}, remoteRegistry interfaces.IRemoteReg
 }
 
 // RegistImage regist to imageNotifier
-func (r *ImageNotifier) RegistImage(controller interfaces.IController, url, tag string) {
+func (r *ImageNotifier) RegistImage(controller interfaces.IController, url, tag, platformString string) {
 
-	notifyId := ImageNotifierId{controller: controller, url: url, tag: tag}
+	notifyId := ImageNotifierId{controller: controller, url: url, tag: tag, platformString: platformString}
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -60,9 +61,9 @@ func (r *ImageNotifier) RegistImage(controller interfaces.IController, url, tag 
 }
 
 // UnregistImage unregist from imageNotifier
-func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, tag string) {
+func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, tag, platformString string) {
 
-	notifyId := ImageNotifierId{controller: controller, url: url, tag: tag}
+	notifyId := ImageNotifierId{controller: controller, url: url, tag: tag, platformString: platformString}
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -84,19 +85,20 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 }
 
 func (r *ImageNotifier) checkImageUpdate(image checkImage) {
-	imageString, err := r.remoteRegistry.GetImageString(image.url, image.tag)
+	imageString, err := r.remoteRegistry.GetImageString(image.url, image.tag, "")
 	if err != nil {
 		klog.Errorf("[%s] checkImageUpdate %s:%s err=%s\n", image.controller.GetReresourceName(), image.url, image.tag, err)
 		return
 	}
 
-	image.controller.OnUpdateImageString(image.url, image.tag, imageString)
+	image.controller.OnUpdateImageString(image.url, image.tag, image.platformString, imageString)
 }
 
 type checkImage struct {
-	controller interfaces.IController
-	url        string
-	tag        string
+	controller     interfaces.IController
+	url            string
+	tag            string
+	platformString string
 }
 
 func (r *ImageNotifier) checkAllImageNotifyList() {
