@@ -8,7 +8,7 @@ env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: docker.io
   # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ DOCKERHUB_IMAGE_NAME }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_IMAGE_NAME }}
 
 
 jobs:
