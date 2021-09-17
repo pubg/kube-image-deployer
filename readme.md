@@ -1,6 +1,6 @@
 # kube-image-deployer
 
-kube-image-deployer는 Docker Hub / Harbor의 Image:Tag를 감시하는 Kubernetes Controller입니다.
+kube-image-deployer는 Docker Registry의 Image:Tag를 감시하는 Kubernetes Controller입니다.
 
 Keel과 유사하지만 단일 태그만 감시하며 더 간결하게 동작합니다.
 
@@ -19,7 +19,7 @@ offDeployments           = *flag.Bool("off-deployments", false, "disable deploym
 offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
 offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
 offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-imageStringCacheTTLSec     = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
+imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
 imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
 controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
 controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
@@ -33,9 +33,16 @@ controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "contr
 # Kubernetes Yaml Examples
 ## Yaml 필수 구성 요소
 * metadata.label.kube-image-deployer
-    * label을 가진 Workload를 감시하게 되므로 필수입니다.
+  * label을 가진 Workload를 감시하게 되므로 필수입니다.
 * metadata.annotations.kube-image-deployer/\${containerName} = \${ImageURL}:\${Tag}
-    * 자동 업데이트를 동작시킬 컨테이너 이름과 이미지, 태그를 Annotation에 등록합니다.
+  * 자동 업데이트를 동작시킬 컨테이너 이름과 이미지, 태그를 Annotation에 등록합니다.
+
+## Tag 감시 방식
+* Exact match tag
+  * busybox:1.34.0 -> busybox@sha256:15f840677a5e245d9ea199eb9b026b1539208a5183621dced7b469f6aa678115
+
+* Asterisk match tag
+  * busybox:1.34.* -> 1.34.0, 1.34.1, 1.34.2, ...
 
 ## Yaml Samples
 ### Deployments
@@ -45,7 +52,7 @@ kind: Deployment
 metadata:
   annotations:
     kube-image-deployer/busybox-init: 'busybox:latest' # set init container update
-    kube-image-deployer/busybox2: 'busybox:1.34.0'     # set container update
+    kube-image-deployer/busybox2: 'busybox:1.34.*'     # set container update
   labels:
     app: kube-image-deployer-test
     kube-image-deployer: 'true'                        # enable kube-image-deployer
@@ -66,14 +73,17 @@ spec:
           image: busybox # no change
           args: ['sleep', '1000000']
         - name: busybox2
-          image: busybox # change to busybox@sha:763faa268d8cad75fb778c1f09589d158cba96f6df1e8eee6c712de240f95b49
+          image: busybox # change to busybox:1.34.0
           args: ['sleep', '1000000']
       initContainers:
         - name: busybox-init
           image: busybox # change to busybox@sha:b862520da7361ea093806d292ce355188ae83f21e8e3b2a3ce4dbdba0a230f83
 ```
 
+# Private Repositories
+Local의 Docker Creds로 Private Repository에 접근할 수 있습니다. Docker CLI가 있는 경우 Docker Login을 하면 되고,
+
+없다면 ```$HOME/.docker/config.json```의 Auths를 통해 권한을 얻어 접근할 수 있습니다.
+
 # Todo
-* Private Registry Authorization
-* AWS ECR
 * Test Code
