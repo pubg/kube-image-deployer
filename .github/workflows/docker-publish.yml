@@ -74,7 +74,7 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          author_name: Docker Publish - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} # default: 8398a7@action-slack
+          author_name: Docker Publish - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} # default: 8398a7@action-slack
           fields: repo,message,author,action,eventName,workflow,took,job
         env:
           SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }} # required
