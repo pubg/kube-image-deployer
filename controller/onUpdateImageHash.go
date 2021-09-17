@@ -146,7 +146,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 }
 
 // OnUpdateImageString is a controller function that is called when an image hash is updated
-func (c *Controller) OnUpdateImageString(url, tag, imageString string) {
+func (c *Controller) OnUpdateImageString(url, tag, platformString, imageString string) {
 
 	notify := imageUpdateNotify{
 		url:         url,

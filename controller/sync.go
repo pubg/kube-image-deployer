@@ -117,7 +117,7 @@ func (c *Controller) registImage(image Image) {
 		c.syncedImagesMutex.Unlock()
 	}
 
-	go c.imageNotifier.RegistImage(c, image.url, image.tag) // 이미지 변경 감지 등록
+	go c.imageNotifier.RegistImage(c, image.url, image.tag, "") // 이미지 변경 감지 등록
 
 }
 
@@ -133,6 +133,6 @@ func (c *Controller) unregistImage(image Image) {
 	delete(c.syncedImages, image)
 	c.syncedImagesMutex.Unlock()
 
-	go c.imageNotifier.UnregistImage(c, image.url, image.tag) // 이미지 변경 감지 해제
+	go c.imageNotifier.UnregistImage(c, image.url, image.tag, "") // 이미지 변경 감지 해제
 
 }

@@ -2,15 +2,15 @@ package interfaces
 
 type IController interface {
 	Run(workers int, stopCh chan struct{})
-	OnUpdateImageString(url, tag, imageString string)
+	OnUpdateImageString(url, tag, platformString, imageString string)
 	GetReresourceName() string
 }
 
 type IImageNotifier interface {
-	RegistImage(c IController, url, tag string)
-	UnregistImage(c IController, url, tag string)
+	RegistImage(c IController, url, tag, platformString string)
+	UnregistImage(c IController, url, tag, platformString string)
 }
 
 type IRemoteRegistry interface {
-	GetImageString(url, tag string) (string, error)
+	GetImageString(url, tag, platformString string) (string, error)
 }
