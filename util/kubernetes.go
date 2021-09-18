@@ -7,45 +7,55 @@ import (
 	appV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
 	coreV1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 func GetAnnotations(obj interface{}) map[string]string {
-	if o, ok := obj.(*appV1.Deployment); ok {
-		return o.Annotations
-	} else if o, ok := obj.(*appV1.StatefulSet); ok {
-		return o.Annotations
-	} else if o, ok := obj.(*appV1.DaemonSet); ok {
-		return o.Annotations
-	} else if o, ok := obj.(*batchV1.CronJob); ok {
-		return o.Annotations
+	switch t := obj.(type) {
+	case *appV1.Deployment:
+		return obj.(*appV1.Deployment).Annotations
+	case *appV1.StatefulSet:
+		return obj.(*appV1.StatefulSet).Annotations
+	case *appV1.DaemonSet:
+		return obj.(*appV1.DaemonSet).Annotations
+	case *batchV1.CronJob:
+		return obj.(*batchV1.CronJob).Annotations
+	default:
+		klog.Errorf("GetAnnotations unknown type %T", t)
+		return make(map[string]string)
 	}
-	return make(map[string]string)
 }
 
 func GetContainers(obj interface{}) []coreV1.Container {
-	if deployment, ok := obj.(*appV1.Deployment); ok {
-		return deployment.Spec.Template.Spec.Containers
-	} else if statefulSet, ok := obj.(*appV1.StatefulSet); ok {
-		return statefulSet.Spec.Template.Spec.Containers
-	} else if daemonSet, ok := obj.(*appV1.DaemonSet); ok {
-		return daemonSet.Spec.Template.Spec.Containers
-	} else if cronjob, ok := obj.(*batchV1.CronJob); ok {
-		return cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers
+	switch t := obj.(type) {
+	case *appV1.Deployment:
+		return obj.(*appV1.Deployment).Spec.Template.Spec.Containers
+	case *appV1.StatefulSet:
+		return obj.(*appV1.StatefulSet).Spec.Template.Spec.Containers
+	case *appV1.DaemonSet:
+		return obj.(*appV1.DaemonSet).Spec.Template.Spec.Containers
+	case *batchV1.CronJob:
+		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers
+	default:
+		klog.Errorf("GetContainers unknown type %T", t)
+		return make([]coreV1.Container, 0)
 	}
-	return make([]coreV1.Container, 0)
 }
 
 func GetInitContainers(obj interface{}) []coreV1.Container {
-	if deployment, ok := obj.(*appV1.Deployment); ok {
-		return deployment.Spec.Template.Spec.InitContainers
-	} else if statefulSet, ok := obj.(*appV1.StatefulSet); ok {
-		return statefulSet.Spec.Template.Spec.InitContainers
-	} else if daemonSet, ok := obj.(*appV1.DaemonSet); ok {
-		return daemonSet.Spec.Template.Spec.InitContainers
-	} else if cronjob, ok := obj.(*batchV1.CronJob); ok {
-		return cronjob.Spec.JobTemplate.Spec.Template.Spec.InitContainers
+	switch t := obj.(type) {
+	case *appV1.Deployment:
+		return obj.(*appV1.Deployment).Spec.Template.Spec.InitContainers
+	case *appV1.StatefulSet:
+		return obj.(*appV1.StatefulSet).Spec.Template.Spec.InitContainers
+	case *appV1.DaemonSet:
+		return obj.(*appV1.DaemonSet).Spec.Template.Spec.InitContainers
+	case *batchV1.CronJob:
+		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.InitContainers
+	default:
+		klog.Errorf("GetInitContainers unknown type %T", t)
+		return make([]coreV1.Container, 0)
 	}
-	return make([]coreV1.Container, 0)
 }
 
 func GetContainerByName(obj interface{}, name string) (coreV1.Container, error) {
