@@ -16,6 +16,7 @@ import (
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
@@ -54,6 +55,15 @@ func init() {
 
 // NewClientset returns a new kubernetes clientset
 func NewClientset() *kubernetes.Clientset {
+
+	// try the in-cluster config
+	if config, err := rest.InClusterConfig(); err == nil {
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			klog.Fatal(err)
+		}
+		return clientset
+	}
 
 	home, _ := os.UserHomeDir()
 
