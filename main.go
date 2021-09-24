@@ -12,7 +12,7 @@ import (
 	"github.com/pubg/kube-image-deployer/remoteRegistry/docker"
 	"github.com/pubg/kube-image-deployer/watcher"
 	appV1 "k8s.io/api/apps/v1"
-	batchV1 "k8s.io/api/batch/v1"
+	batchV1beta1 "k8s.io/api/batch/v1beta1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -120,10 +120,10 @@ func runWatchers(stopCh chan struct{}) {
 
 	if !offCronjobs { // cronjobs watcher
 		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-			_, err := clientset.BatchV1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("cronjobs", stopCh, cache.NewFilteredListWatchFromClient(clientset.BatchV1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		go watcher.NewWatcher("cronjobs", stopCh, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 }
 
