@@ -120,10 +120,10 @@ func runWatchers(stopCh chan struct{}) {
 
 	if !offCronjobs { // cronjobs watcher
 		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-			_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			_, err := clientset.BatchV1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("cronjobs", stopCh, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		go watcher.NewWatcher("cronjobs", stopCh, cache.NewFilteredListWatchFromClient(clientset.BatchV1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 }
 
