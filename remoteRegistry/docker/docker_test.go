@@ -23,7 +23,7 @@ var privateenv = testenv{}
 var ecrenv = testenv{}
 
 func init() {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		fmt.Printf("error loading .env file - %s", err)
 	}
 
