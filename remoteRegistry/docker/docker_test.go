@@ -42,11 +42,11 @@ func TestGetImageStringAsterisk(t *testing.T) {
 	r := NewRemoteRegistry()
 
 	if s, err := r.GetImageString("busybox", "1.34.*", "linux/amd64"); err != nil {
-		t.Fatalf("TestGetImageStringAsterisk asterisk err: %v", err)
-	} else if !strings.Contains(s, "@sha256:") {
-		t.Fatalf("TestGetImageStringAsterisk asterisk no digest: %s", s)
+		t.Fatalf("err: %v", err)
+	} else if !strings.HasPrefix(s, "busybox@sha256:") {
+		t.Fatalf("no digest: %s", s)
 	} else {
-		t.Logf("TestGetImageStringAsterisk asterisk success: %s", s)
+		t.Logf("success: %s", s)
 	}
 }
 
@@ -62,13 +62,13 @@ func TestGetImageFromPrivateRegistry(t *testing.T) {
 			privateenv.host: NewPrivateAuthenticator(privateenv.host, privateenv.username, privateenv.password),
 		})
 	} else {
-		t.Fatalf("TestGetImageFromPrivateRegistry env not set")
+		t.Fatalf("env not set")
 	}
 
 	if s, err := r.GetImageString(privateenv.host+"/"+privateenv.image, privateenv.tag, "linux/amd64"); err != nil {
-		t.Fatalf("TestGetImageFromPrivateRegistry err: %v", err)
+		t.Fatalf("err: %v", err)
 	} else {
-		t.Logf("TestGetImageFromPrivateRegistry success: %s", s)
+		t.Logf("success: %s", s)
 	}
 }
 
@@ -76,12 +76,12 @@ func TestGetImageFromECR(t *testing.T) {
 	r := NewRemoteRegistry()
 
 	if ecrenv.host == "" || ecrenv.image == "" || ecrenv.tag == "" {
-		t.Fatalf("TestGetImageFromECR env not set")
+		t.Fatalf("env not set")
 	}
 
 	if s, err := r.GetImageString(ecrenv.host+"/"+ecrenv.image, ecrenv.tag, "linux/amd64"); err != nil {
-		t.Fatalf("TestGetImageFromECR err: %v, %+v", err, ecrenv)
+		t.Fatalf("err: %v, %+v", err, ecrenv)
 	} else {
-		t.Logf("TestGetImageFromECR success: %s", s)
+		t.Logf("success: %s", s)
 	}
 }
