@@ -9,10 +9,12 @@ import (
 )
 
 type testenv struct {
-	host  string
-	image string
-	tag   string
-	auth  string
+	host     string
+	image    string
+	tag      string
+	auth     string
+	username string
+	password string
 }
 
 var privateenv = testenv{}
@@ -23,10 +25,14 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
 	privateenv.host = r["TEST_DOCKER_PRIVATE_HOST"]
 	privateenv.image = r["TEST_DOCKER_PRIVATE_IMAGE"]
 	privateenv.tag = r["TEST_DOCKER_PRIVATE_TAG"]
 	privateenv.auth = r["TEST_DOCKER_PRIVATE_AUTH"]
+	privateenv.username = r["TEST_DOCKER_PRIVATE_USERNAME"]
+	privateenv.password = r["TEST_DOCKER_PRIVATE_PASSWORD"]
+
 	ecrenv.host = r["TEST_DOCKER_ECR_HOST"]
 	ecrenv.image = r["TEST_DOCKER_ECR_IMAGE"]
 	ecrenv.tag = r["TEST_DOCKER_ECR_TAG"]
@@ -46,9 +52,18 @@ func TestGetImageStringAsterisk(t *testing.T) {
 
 func TestGetImageFromPrivateRegistry(t *testing.T) {
 	r := NewRemoteRegistry()
-	r.WithImageAuthMap(map[string]authn.Authenticator{
-		privateenv.host: NewPrivateAuthenticatorWithAuth(privateenv.host, privateenv.auth),
-	})
+
+	if privateenv.auth != "" {
+		r.WithImageAuthMap(map[string]authn.Authenticator{
+			privateenv.host: NewPrivateAuthenticatorWithAuth(privateenv.host, privateenv.auth),
+		})
+	} else if privateenv.username != "" && privateenv.password != "" {
+		r.WithImageAuthMap(map[string]authn.Authenticator{
+			privateenv.host: NewPrivateAuthenticator(privateenv.host, privateenv.username, privateenv.password),
+		})
+	} else {
+		t.Fatalf("TestGetImageFromPrivateRegistry env not set")
+	}
 
 	if s, err := r.GetImageString(privateenv.host+"/"+privateenv.image, privateenv.tag, "linux/amd64"); err != nil {
 		t.Fatalf("TestGetImageFromPrivateRegistry err: %v", err)
@@ -59,6 +74,10 @@ func TestGetImageFromPrivateRegistry(t *testing.T) {
 
 func TestGetImageFromECR(t *testing.T) {
 	r := NewRemoteRegistry()
+
+	if ecrenv.host == "" || ecrenv.image == "" || ecrenv.tag == "" {
+		t.Fatalf("TestGetImageFromECR env not set")
+	}
 
 	if s, err := r.GetImageString(ecrenv.host+"/"+ecrenv.image, ecrenv.tag, "linux/amd64"); err != nil {
 		t.Fatalf("TestGetImageFromECR err: %v, %+v", err, ecrenv)
