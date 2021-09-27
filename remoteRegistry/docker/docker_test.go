@@ -54,6 +54,7 @@ func TestGetImageStringAsterisk(t *testing.T) {
 func TestGetImageFromPrivateRegistry(t *testing.T) {
 	if os.Getenv("TEST_DOCKER_PRIVATE_SKIP") != "" {
 		t.Log("skipping test")
+		return
 	}
 
 	r := NewRemoteRegistry()
@@ -81,6 +82,7 @@ func TestGetImageFromECR(t *testing.T) {
 
 	if os.Getenv("TEST_DOCKER_ECR_SKIP") != "" {
 		t.Log("skipping test")
+		return
 	}
 
 	r := NewRemoteRegistry()
