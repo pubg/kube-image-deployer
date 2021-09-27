@@ -23,7 +23,7 @@ func GetHighestVersionWithFilter(versions []string, filter string) (string, erro
 		// fmt.Println(v)
 		matches := patt.FindStringSubmatch(v)
 
-		if 0 == len(matches) {
+		if len(matches) == 0 {
 			continue
 		}
 
@@ -32,14 +32,14 @@ func GetHighestVersionWithFilter(versions []string, filter string) (string, erro
 			continue
 		}
 
-		if targetVer >= ver {
+		if targetVer > ver {
 			continue
 		}
 
 		targetTag, targetVer = v, ver
 	}
 
-	if "" == targetTag {
+	if targetTag == "" {
 		return "", ERR_NOT_FOUND
 	}
 

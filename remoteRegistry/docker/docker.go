@@ -112,27 +112,25 @@ func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformStrin
 	}
 
 	cacheKey := url + "___" + tag
-	target, err := d.cache.Get(cacheKey, func() (interface{}, error) {
+	image, err := d.cache.Get(cacheKey, func() (interface{}, error) {
 		tags, err := remote.List(repo, remote.WithAuthFromKeychain(authKeyChain))
 		if nil != err {
 			return "", err
 		}
 
-		tag, err := util.GetHighestVersionWithFilter(tags, tag)
+		t, err := util.GetHighestVersionWithFilter(tags, tag)
 		if nil != err {
 			return "", err
 		}
 
-		return d.getImageDigestHash(url, tag, platformString)
+		return d.getImageDigestHash(url, t, platformString)
 	})
 
 	if nil != err {
 		return "", err
 	}
 
-	fullUrl := fmt.Sprintf("%s:%s", url, target.(string))
-
-	return fullUrl, nil
+	return image.(string), nil
 }
 
 func (d *RemoteRegistryDocker) parsePlatform(platformString string) (*v1.Platform, error) {
