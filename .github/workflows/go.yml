@@ -26,20 +26,21 @@ jobs:
       run: go build -v ./...
 
     - uses: khan/pull-request-comment-trigger@master
-        id: check
-        with:
-          trigger: '/test'
-        env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      id: check
+      with:
+        trigger: '/test'
+      env:
+        GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
 
     - name: Test-Skip
+      if: steps.check.outputs.triggered == 'false'
       run: go test -v ./...
       env:
         TEST_DOCKER_PRIVATE_SKIP: "1"
         TEST_DOCKER_ECR_SKIP: "1"
-      if: steps.check.outputs.triggered == 'false'
     
     - name: Test-All
+      if: steps.check.outputs.triggered == 'true'
       run: go test -v ./...
       env:
         TEST_DOCKER_PRIVATE_HOST: ${{ secrets.TEST_DOCKER_PRIVATE_HOST }}
@@ -54,5 +55,4 @@ jobs:
 
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      if: steps.check.outputs.triggered == 'false'
     
