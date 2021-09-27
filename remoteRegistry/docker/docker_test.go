@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -21,21 +22,21 @@ var privateenv = testenv{}
 var ecrenv = testenv{}
 
 func init() {
-	r, err := godotenv.Read()
+	err := godotenv.Load()
 	if err != nil {
 		panic(err)
 	}
 
-	privateenv.host = r["TEST_DOCKER_PRIVATE_HOST"]
-	privateenv.image = r["TEST_DOCKER_PRIVATE_IMAGE"]
-	privateenv.tag = r["TEST_DOCKER_PRIVATE_TAG"]
-	privateenv.auth = r["TEST_DOCKER_PRIVATE_AUTH"]
-	privateenv.username = r["TEST_DOCKER_PRIVATE_USERNAME"]
-	privateenv.password = r["TEST_DOCKER_PRIVATE_PASSWORD"]
+	privateenv.host = os.Getenv("TEST_DOCKER_PRIVATE_HOST")
+	privateenv.image = os.Getenv("TEST_DOCKER_PRIVATE_IMAGE")
+	privateenv.tag = os.Getenv("TEST_DOCKER_PRIVATE_TAG")
+	privateenv.auth = os.Getenv("TEST_DOCKER_PRIVATE_AUTH")
+	privateenv.username = os.Getenv("TEST_DOCKER_PRIVATE_USERNAME")
+	privateenv.password = os.Getenv("TEST_DOCKER_PRIVATE_PASSWORD")
 
-	ecrenv.host = r["TEST_DOCKER_ECR_HOST"]
-	ecrenv.image = r["TEST_DOCKER_ECR_IMAGE"]
-	ecrenv.tag = r["TEST_DOCKER_ECR_TAG"]
+	ecrenv.host = os.Getenv("TEST_DOCKER_ECR_HOST")
+	ecrenv.image = os.Getenv("TEST_DOCKER_ECR_IMAGE")
+	ecrenv.tag = os.Getenv("TEST_DOCKER_ECR_TAG")
 }
 
 func TestGetImageStringAsterisk(t *testing.T) {

@@ -12,19 +12,20 @@ import (
 )
 
 type ECRAuthenticator struct {
-	url string
+	url    string
+	region string
+}
+
+func getRegionFromECRURL(url string) string {
+	return isECRRegex.FindStringSubmatch(url)[1]
 }
 
 func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 
 	token, err := ecrCache.Get(e.url, func() (interface{}, error) {
 
-		sess, err := session.NewSession(&aws.Config{Region: aws.String("ap-northeast-2")})
-		if err != nil {
-			return nil, err
-		}
-
-		svc := ecr.New(sess)
+		sess := session.Must(session.NewSessionWithOptions(session.Options{}))
+		svc := ecr.New(sess, aws.NewConfig().WithRegion(e.region))
 		if token, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{}); err != nil {
 			klog.Errorf("ECRAuthenticator GetAuthorizationToken error url=%s, err=%v", e.url, err)
 			return nil, err
@@ -46,7 +47,7 @@ func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 }
 
 //aws_account_id.dkr.ecr.region.amazonaws.com
-var isECRRegex = regexp.MustCompile(`\d+\.dkr\.ecr\..+\.amazonaws.com`)
+var isECRRegex = regexp.MustCompile(`\d+\.dkr\.ecr\.(.+)\.amazonaws.com`)
 var ecrCache = util.NewCache(60 * 60 * 11) // 11 hours
 
 // isECR returns true if the url is ECR repository.
@@ -57,6 +58,7 @@ func isECR(url string) bool {
 
 func NewECRAuthenticator(url string) *ECRAuthenticator {
 	return &ECRAuthenticator{
-		url: url,
+		url:    url,
+		region: getRegionFromECRURL(url),
 	}
 }
