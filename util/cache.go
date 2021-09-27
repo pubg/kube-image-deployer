@@ -55,8 +55,11 @@ func (c *Cache) Get(key string, getter func() (interface{}, error)) (interface{}
 			mutex: &sync.Mutex{},
 		}
 
-		cache.mutex.Lock()
+		c.mutex.Lock()
 		c.cache[key] = cache
+		c.mutex.Unlock()
+
+		cache.mutex.Lock()
 		value, err := getter() // getter 획득동안 lock 유지
 		cache.value = value
 		cache.err = err
