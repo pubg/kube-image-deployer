@@ -28,7 +28,8 @@ controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "contr
 # 동작 방식
 * kube-image-deployer label을 가진 Workload를 감시 대상으로 등록 합니다.
 * Workload의 annotation을 읽어 감시할 Image와 Container를 매핑합니다.
-* 1분 간격(imageStringCacheTTLSec)으로 Docker Hub / Harbor 에서 Image:Tag의 Hash를 획득해 해당 Image:Tag를 사용하는 감시 대상 Workload의 Container에 Strategic Merge Patch를 진행합니다.
+* 1분 간격(imageStringCacheTTLSec)으로 Docker Registry API v2로 이미지 정보와 이미지의 Digest Hash를 획득해 해당 사용중인 Workload의 Container에 Strategic Merge Patch를 진행합니다.
+* Image Digest Hash로 패치하기 때문에 새 태그만 추가되고 이미지 Hash가 변경되지 않은 경우는 Workload가 재배포 되지 않습니다. (의도됨)
 
 # Kubernetes Yaml Examples
 ## Yaml 필수 구성 요소
@@ -42,7 +43,7 @@ controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "contr
   * busybox:1.34.0 -> busybox@sha256:15f840677a5e245d9ea199eb9b026b1539208a5183621dced7b469f6aa678115
 
 * Asterisk match tag
-  * busybox:1.34.* -> 1.34.0, 1.34.1, 1.34.2, ...
+  * busybox:1.34.* -> 1.34.0, 1.34.1, 1.34.2, ... -> busybox@sha256:15f840677a5e245d9ea199eb9b026b1539208a5183621dced7b469f6aa678115
 
 ## Yaml Samples
 ### Deployments
@@ -73,7 +74,7 @@ spec:
           image: busybox # no change
           args: ['sleep', '1000000']
         - name: busybox2
-          image: busybox # change to busybox:1.34.0
+          image: busybox # change to busybox@sha:b862520da7361ea093806d292ce355188ae83f21e8e3b2a3ce4dbdba0a230f83
           args: ['sleep', '1000000']
       initContainers:
         - name: busybox-init
@@ -81,9 +82,21 @@ spec:
 ```
 
 # Private Repositories
-Local의 Docker Creds로 Private Repository에 접근할 수 있습니다. Docker CLI가 있는 경우 Docker Login을 하면 되고,
+kube-image-deployer는 Docker Creds로 기본 접근 권한을 획득합니다.
 
-없다면 ```$HOME/.docker/config.json```의 Auths를 통해 권한을 얻어 접근할 수 있습니다.
+## DockerHub / Harbor의 Private Registry 이미지 감시하기
+1. Kubernetes에 Private Registry 접근용 dockerconfig Secret을 생성합니다.
+1. Auths에 URL과 접근 방법(username/password...) 입력합니다.
+1. ```/root/.docker/config.json``` 위치에 Secret Volume을 마운트합니다.
+1. kube-image-deployer는 AuthKeyChain을 통해 Creds에 마운트된 정보로 Private Registry를 접근합니다.
+
+## ECR의 Private Registry 이미지 감시하기
+두 가지 방법이 있습니다.
+1. kube-image-deployer Service Account에 ECR 접근 권한을 가진 Role을 설정해 권한을 주는 방법 (AWS IRSA)
+1. kube-image-deployer env에 ECR 접근 가능한 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY를 입력하는 방법 (AWS AccessToken)
+
+ECR 이미지 URL이 감지대상인 경우 kube-image-deloyer는 ECR의 GetAuthorizationToken을 호출해 Docker Auth Token을 획득하고 이 토큰을 사용해 Docker Registry API v2로 이미지 정보를 획득합니다.
 
 # Todo
-* Test Code
+* Add Test Code
+* Support ECR Private Registry

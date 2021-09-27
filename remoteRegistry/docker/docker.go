@@ -12,7 +12,7 @@ import (
 )
 
 type RemoteRegistryDocker struct {
-	imageAuthMap    map[string]authn.Keychain
+	imageAuthMap    map[string]authn.Authenticator
 	defaultPlatform *v1.Platform
 	cache           *util.Cache
 }
@@ -20,7 +20,7 @@ type RemoteRegistryDocker struct {
 // NewRemoteRegistry returns a new RemoteRegistryDocker
 func NewRemoteRegistry() *RemoteRegistryDocker {
 	d := &RemoteRegistryDocker{
-		imageAuthMap:    make(map[string]authn.Keychain),
+		imageAuthMap:    make(map[string]authn.Authenticator),
 		cache:           util.NewCache(60),
 		defaultPlatform: &v1.Platform{OS: "linux", Architecture: "amd64"},
 	}
@@ -28,7 +28,7 @@ func NewRemoteRegistry() *RemoteRegistryDocker {
 	return d
 }
 
-func (d *RemoteRegistryDocker) WithImageAuthMap(imageAuthMap map[string]authn.Keychain) *RemoteRegistryDocker {
+func (d *RemoteRegistryDocker) WithImageAuthMap(imageAuthMap map[string]authn.Authenticator) *RemoteRegistryDocker {
 	d.imageAuthMap = imageAuthMap
 	return d
 }
@@ -60,7 +60,7 @@ func (d *RemoteRegistryDocker) GetImageString(url, tag, platformString string) (
 	}
 }
 
-func (d *RemoteRegistryDocker) getAuthKeyChain(url string) authn.Keychain {
+func (d *RemoteRegistryDocker) getAuthenticator(url string) authn.Authenticator {
 
 	for key, value := range d.imageAuthMap {
 		if strings.HasPrefix(url, key) {
@@ -68,8 +68,24 @@ func (d *RemoteRegistryDocker) getAuthKeyChain(url string) authn.Keychain {
 		}
 	}
 
-	return authn.DefaultKeychain
+	if isECR(url) { // image가 ecr private repository 인 경우
+		return NewECRAuthenticator(url)
+	}
 
+	return nil
+
+}
+
+func (d *RemoteRegistryDocker) getRemoteOptions(url string) []remote.Option {
+	var options []remote.Option = []remote.Option{}
+
+	if auth := d.getAuthenticator(url); auth != nil {
+		options = append(options, remote.WithAuth(auth))
+	} else {
+		options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	}
+
+	return options
 }
 
 func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString string) (string, error) {
@@ -81,7 +97,8 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 	}
 
 	fullUrl := fmt.Sprintf("%s:%s", url, tag)
-	authKeyChain := d.getAuthKeyChain(url)
+	options := d.getRemoteOptions(url)
+	options = append(options, remote.WithPlatform(*platform))
 	ref, err := name.ParseReference(fullUrl)
 
 	if err != nil {
@@ -89,7 +106,7 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 	}
 
 	hash, err := d.cache.Get(fullUrl, func() (interface{}, error) {
-		if img, err := remote.Image(ref, remote.WithAuthFromKeychain(authKeyChain), remote.WithPlatform(*platform)); err == nil {
+		if img, err := remote.Image(ref, options...); err == nil {
 			if digest, err := img.Digest(); err == nil {
 				return digest.String(), nil
 			} else {
@@ -105,7 +122,7 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 }
 
 func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformString string) (string, error) {
-	authKeyChain := d.getAuthKeyChain(url)
+	options := d.getRemoteOptions(url)
 	repo, err := name.NewRepository(url)
 	if nil != err {
 		return "", err
@@ -113,7 +130,7 @@ func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformStrin
 
 	cacheKey := url + "___" + tag
 	image, err := d.cache.Get(cacheKey, func() (interface{}, error) {
-		tags, err := remote.List(repo, remote.WithAuthFromKeychain(authKeyChain))
+		tags, err := remote.List(repo, options...)
 		if nil != err {
 			return "", err
 		}

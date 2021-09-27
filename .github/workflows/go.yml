@@ -23,3 +23,7 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+      env:
+        TEST_DOCKER_PRIVATE_SKIP: "1"
+        TEST_DOCKER_ECR_SKIP: "1"
+        
