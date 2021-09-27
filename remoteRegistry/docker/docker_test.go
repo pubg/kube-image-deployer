@@ -52,6 +52,10 @@ func TestGetImageStringAsterisk(t *testing.T) {
 }
 
 func TestGetImageFromPrivateRegistry(t *testing.T) {
+	if os.Getenv("TEST_DOCKER_PRIVATE_SKIP") != "" {
+		t.Log("skipping test")
+	}
+
 	r := NewRemoteRegistry()
 
 	if privateenv.auth != "" {

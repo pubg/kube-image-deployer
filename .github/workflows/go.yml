@@ -25,14 +25,6 @@ jobs:
     - name: Test
       run: go test -v ./...
       env:
-        TEST_DOCKER_PRIVATE_HOST: ${{ secrets.TEST_DOCKER_PRIVATE_HOST }}
-        TEST_DOCKER_PRIVATE_IMAGE: ${{ secrets.TEST_DOCKER_PRIVATE_IMAGE }}
-        TEST_DOCKER_PRIVATE_TAG: ${{ secrets.TEST_DOCKER_PRIVATE_TAG }}
-        TEST_DOCKER_PRIVATE_USERNAME: ${{ secrets.TEST_DOCKER_PRIVATE_USERNAME }}
-        TEST_DOCKER_PRIVATE_PASSWORD: ${{ secrets.TEST_DOCKER_PRIVATE_PASSWORD }}
-        TEST_DOCKER_ECR_HOST: ${{ secrets.TEST_DOCKER_ECR_HOST }}
-        TEST_DOCKER_ECR_IMAGE: ${{ secrets.TEST_DOCKER_ECR_IMAGE }}
-        TEST_DOCKER_ECR_TAG: ${{ secrets.TEST_DOCKER_ECR_TAG }}
-
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TEST_DOCKER_PRIVATE_SKIP: "1"
+        TEST_DOCKER_ECR_SKIP: "1"
+        
