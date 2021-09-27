@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -22,9 +23,8 @@ var privateenv = testenv{}
 var ecrenv = testenv{}
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		panic(err)
+	if err := godotenv.Load(); err != nil {
+		fmt.Printf("error loading .env file - %s", err)
 	}
 
 	privateenv.host = os.Getenv("TEST_DOCKER_PRIVATE_HOST")
@@ -74,6 +74,11 @@ func TestGetImageFromPrivateRegistry(t *testing.T) {
 }
 
 func TestGetImageFromECR(t *testing.T) {
+
+	if os.Getenv("TEST_DOCKER_ECR_SKIP") != "" {
+		t.Log("skipping test")
+	}
+
 	r := NewRemoteRegistry()
 
 	if ecrenv.host == "" || ecrenv.image == "" || ecrenv.tag == "" {
