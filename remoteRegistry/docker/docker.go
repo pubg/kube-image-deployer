@@ -53,7 +53,7 @@ func (d *RemoteRegistryDocker) GetImageString(url, tag, platformString string) (
 
 	if strings.Contains(tag, "*") {
 		// *을 포함하는 경우 전체 tag에서 가장 높은 tag를 찾아 반환한다.
-		return d.getImageHighestVersionTag(url, tag)
+		return d.getImageHighestVersionTag(url, tag, platformString)
 	} else {
 		// 단일 tag인 경우 가장 최신 sha256 digest를 반환한다. digest의 경우 platform이 필요하다.
 		return d.getImageDigestHash(url, tag, platformString)
@@ -104,7 +104,7 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 
 }
 
-func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag string) (string, error) {
+func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformString string) (string, error) {
 	authKeyChain := d.getAuthKeyChain(url)
 	repo, err := name.NewRepository(url)
 	if nil != err {
@@ -118,13 +118,14 @@ func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag string) (strin
 			return "", err
 		}
 
-		t, err := util.GetHighestVersionWithFilter(tags, tag)
+		tag, err := util.GetHighestVersionWithFilter(tags, tag)
 		if nil != err {
 			return "", err
 		}
 
-		return t, nil
+		return d.getImageDigestHash(url, tag, platformString)
 	})
+
 	if nil != err {
 		return "", err
 	}
