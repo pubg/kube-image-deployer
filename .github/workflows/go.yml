@@ -12,7 +12,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    environment: test
     steps:
     - uses: actions/checkout@v2
 
@@ -41,6 +40,7 @@ jobs:
     - name: Test-All
       if: steps.check.outputs.triggered == 'true'
       run: go test -v ./...
+      environment: test
       env:
         TEST_DOCKER_PRIVATE_HOST: ${{ secrets.TEST_DOCKER_PRIVATE_HOST }}
         TEST_DOCKER_PRIVATE_IMAGE: ${{ secrets.TEST_DOCKER_PRIVATE_IMAGE }}
