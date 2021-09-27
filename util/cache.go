@@ -2,14 +2,16 @@ package util
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type Cache struct {
 	TTL uint
 
-	cache map[string]*cacheResult
-	mutex *sync.Mutex
+	cache                  map[string]*cacheResult
+	mutex                  *sync.Mutex
+	cacheGetterCalledCount uint32
 }
 
 type cacheResult struct {
@@ -21,9 +23,10 @@ type cacheResult struct {
 
 func NewCache(ttlSeconds uint) *Cache {
 	return &Cache{
-		TTL:   ttlSeconds,
-		cache: make(map[string]*cacheResult),
-		mutex: &sync.Mutex{},
+		TTL:                    ttlSeconds,
+		cache:                  make(map[string]*cacheResult),
+		mutex:                  &sync.Mutex{},
+		cacheGetterCalledCount: 0,
 	}
 }
 
@@ -38,6 +41,8 @@ func (c *Cache) Get(key string, getter func() (interface{}, error)) (interface{}
 		cache.mutex.Unlock()
 		return value, err
 	}
+
+	atomic.AddUint32(&c.cacheGetterCalledCount, 1)
 
 	if ok {
 		cache.mutex.Lock()
@@ -55,16 +60,18 @@ func (c *Cache) Get(key string, getter func() (interface{}, error)) (interface{}
 			mutex: &sync.Mutex{},
 		}
 
-		c.mutex.Lock()
+		cache.mutex.Lock() // cache key mutex에 lock부터 걸고
+
+		c.mutex.Lock() // cache map에 추가
 		c.cache[key] = cache
 		c.mutex.Unlock()
 
-		cache.mutex.Lock()
-		value, err := getter() // getter 획득동안 lock 유지
+		value, err := getter() // getter 획득
 		cache.value = value
 		cache.err = err
 		cache.time = time.Now()
-		cache.mutex.Unlock()
+		cache.mutex.Unlock() // unlock
+
 		return value, err
 	}
 

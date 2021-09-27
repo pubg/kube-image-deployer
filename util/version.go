@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var ERR_NOT_FOUND = errors.New("not found")
+var ErrNotFound = errors.New("not found")
 
 func GetHighestVersionWithFilter(versions []string, filter string) (string, error) {
 	targetTag := ""
@@ -40,7 +40,7 @@ func GetHighestVersionWithFilter(versions []string, filter string) (string, erro
 	}
 
 	if targetTag == "" {
-		return "", ERR_NOT_FOUND
+		return "", ErrNotFound
 	}
 
 	return targetTag, nil
