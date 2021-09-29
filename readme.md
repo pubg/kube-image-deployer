@@ -31,10 +31,10 @@ slackMsgPrefix           = *flag.String("slack-msg-prefix", "[$hostname]", "slac
 # Available Environment Variables
 ```shell
 KUBECONFIG_PATH=<absolute path to the kubeconfig file>
-OFF_DEPLOYMENTS=<true|false>
-OFF_STATEFULSETS=<true|false>
-OFF_DAEMONSETS=<true|false>
-OFF_CRONJOBS=<true|false>
+OFF_DEPLOYMENTS=<true>
+OFF_STATEFULSETS=<true>
+OFF_DAEMONSETS=<true>
+OFF_CRONJOBS=<true>
 IMAGE_HASH_CACHE_TTL_SEC=<uint>
 IMAGE_CHECK_INTERVAL_SEC=<uint>
 CONTROLLER_WATCH_KEY=<kube-image-deployer>
