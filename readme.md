@@ -23,6 +23,25 @@ imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image has
 imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
 controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
 controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
+imageDefaultPlatform     = *flag.String("image-default-platform", "linux/amd64", "default platform for docker images")
+slackWebhook             = *flag.String("slack-webhook", "", "slack webhook url. If empty, notifications are disabled")
+slackMsgPrefix           = *flag.String("slack-msg-prefix", "[$hostname]", "slack message prefix. default=[hostname]")
+```
+
+# Available Environment Variables
+```shell
+KUBECONFIG_PATH=<absolute path to the kubeconfig file>
+OFF_DEPLOYMENTS=<true|false>
+OFF_STATEFULSETS=<true|false>
+OFF_DAEMONSETS=<true|false>
+OFF_CRONJOBS=<true|false>
+IMAGE_HASH_CACHE_TTL_SEC=<uint>
+IMAGE_CHECK_INTERVAL_SEC=<uint>
+CONTROLLER_WATCH_KEY=<kube-image-deployer>
+CONTROLLER_WATCH_NAMESPACE=<controller watch namespace. If empty, watch all namespaces>
+IMAGE_DEFAULT_PLATFORM=<default platform for docker images>
+SLACK_WEBHOOK=<slack webhook url. If empty, notifications are disabled>
+SLACK_MSG_PREFIX=<slack message prefix. default=[hostname]>
 ```
 
 # 동작 방식
@@ -99,4 +118,3 @@ ECR 이미지 URL이 감지대상인 경우 kube-image-deloyer는 ECR의 GetAuth
 
 # Todo
 * Add Test Code
-* Support ECR Private Registry

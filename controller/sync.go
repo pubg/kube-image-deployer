@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/pubg/kube-image-deployer/util"
-	"k8s.io/klog"
 )
 
 type Image struct {
@@ -18,7 +17,7 @@ func (c *Controller) syncKey(key string) error {
 
 	obj, exists, err := c.indexer.GetByKey(key)
 	if err != nil {
-		klog.Errorf("[%s] Fetching object with key %s from store failed with %v", c.resource, key, err)
+		c.logger.Errorf("[%s] Fetching object with key %s from store failed with %v", c.resource, key, err)
 		return err
 	}
 
@@ -50,7 +49,12 @@ func (c *Controller) syncKey(key string) error {
 func (c *Controller) getImagesFromCurrentWorkload(obj interface{}, key string) (images map[Image]bool) {
 
 	images = make(map[Image]bool)
-	annotations := util.GetAnnotations(obj)
+	annotations, err := util.GetAnnotations(obj)
+
+	if err != nil {
+		c.logger.Errorf("[%s] GetAnnotations error : %v", c.resource, err)
+		return
+	}
 
 	for annotationKey, annotationValue := range annotations {
 
@@ -79,7 +83,7 @@ func (c *Controller) getImagesFromCurrentWorkload(obj interface{}, key string) (
 	}
 
 	if len(images) == 0 {
-		klog.Warningf("[%s] getImagesFromCurrentWorkload undefined or invalid annotation key=%s\n", c.resource, key)
+		c.logger.Warningf("[%s] getImagesFromCurrentWorkload undefined or invalid annotation key=%s\n", c.resource, key)
 	}
 
 	return
@@ -112,7 +116,7 @@ func (c *Controller) registImage(image Image) {
 		c.syncedImagesMutex.Unlock()
 		return
 	} else {
-		klog.V(2).Infof("[%s] registImage image=%+v\n", c.resource, image)
+		c.logger.Infof("[%s] registImage image=%+v\n", c.resource, image)
 		c.syncedImages[image] = true
 		c.syncedImagesMutex.Unlock()
 	}
@@ -127,7 +131,7 @@ func (c *Controller) unregistImage(image Image) {
 		return
 	}
 
-	klog.V(2).Infof("[%s] unregistImage image=%+v\n", c.resource, image)
+	c.logger.Infof("[%s] unregistImage image=%+v\n", c.resource, image)
 
 	c.syncedImagesMutex.Lock()
 	delete(c.syncedImages, image)

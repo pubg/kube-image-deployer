@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/pubg/kube-image-deployer/interfaces"
+	l "github.com/pubg/kube-image-deployer/logger"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 )
 
 type ImageNotifierId struct {
@@ -22,19 +22,26 @@ type ImageNotifier struct {
 	stopCh chan struct{}
 
 	remoteRegistry interfaces.IRemoteRegistry
+	logger         interfaces.ILogger
 }
 
 func NewImageNotifier(stopCh chan struct{}, remoteRegistry interfaces.IRemoteRegistry, imageCheckIntervalSec uint) *ImageNotifier {
-	imageNotifier := &ImageNotifier{
+	r := &ImageNotifier{
 		list:           make(map[ImageNotifierId]*ImageUpdateNotify),
 		mutex:          sync.RWMutex{},
 		stopCh:         stopCh,
 		remoteRegistry: remoteRegistry,
+		logger:         l.NewLogger(),
 	}
 
-	go wait.Until(imageNotifier.checkAllImageNotifyList, time.Second*time.Duration(imageCheckIntervalSec), stopCh)
+	go wait.Until(r.checkAllImageNotifyList, time.Second*time.Duration(imageCheckIntervalSec), stopCh)
 
-	return imageNotifier
+	return r
+}
+
+func (r *ImageNotifier) WithLogger(logger interfaces.ILogger) *ImageNotifier {
+	r.logger = logger
+	return r
 }
 
 // RegistImage regist to imageNotifier
@@ -53,7 +60,7 @@ func (r *ImageNotifier) RegistImage(controller interfaces.IController, url, tag,
 	}
 
 	// 신규
-	klog.Infof("[%s] RegistImage %s:%s\n", controller.GetReresourceName(), url, tag)
+	r.logger.Infof("[%s] RegistImage %s:%s\n", controller.GetReresourceName(), url, tag)
 
 	imageUpdateNotify := NewImageUpdateNotify(url, tag, "", controller)
 
@@ -71,7 +78,7 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 	existsImageUpdateNotify, ok := r.list[notifyId]
 
 	if !ok { // ??
-		klog.Errorf("[%s] UnregistImage existsImageUpdateNotify notfound url=%s, tag=%s", controller.GetReresourceName(), url, tag)
+		r.logger.Errorf("[%s] UnregistImage existsImageUpdateNotify notfound url=%s, tag=%s", controller.GetReresourceName(), url, tag)
 		return
 	}
 
@@ -79,7 +86,7 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 
 	if referenceCount <= 0 { // 이미지를 참조하는 대상이 더이상 없으면 삭제
 		delete(r.list, notifyId)
-		klog.Infof("[%s] UnregistImage %s:%s\n", controller.GetReresourceName(), url, tag)
+		r.logger.Infof("[%s] UnregistImage %s:%s\n", controller.GetReresourceName(), url, tag)
 	}
 
 }
@@ -87,7 +94,7 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 func (r *ImageNotifier) checkImageUpdate(image checkImage) {
 	imageString, err := r.remoteRegistry.GetImageString(image.url, image.tag, "")
 	if err != nil {
-		klog.Errorf("[%s] checkImageUpdate %s:%s err=%s\n", image.controller.GetReresourceName(), image.url, image.tag, err)
+		r.logger.Errorf("[%s] checkImageUpdate %s:%s err=%s\n", image.controller.GetReresourceName(), image.url, image.tag, err)
 		return
 	}
 

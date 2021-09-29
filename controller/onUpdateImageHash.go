@@ -6,7 +6,6 @@ import (
 
 	"github.com/pubg/kube-image-deployer/util"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 )
 
 type patch struct {
@@ -44,7 +43,7 @@ func (c *Controller) getPatchMapByUpdates(updates []imageUpdateNotify) map[strin
 	patchMap := make(map[string][]patch)
 
 	for _, update := range updates {
-		klog.V(2).Infof("[%s] OnUpdateImageString %s, %s, %s", c.resource, update.url, update.tag, update.imageString)
+		c.logger.Infof("[%s] OnUpdateImageString %s, %s, %s", c.resource, update.url, update.tag, update.imageString)
 
 		c.syncedImagesMutex.RLock()
 		defer c.syncedImagesMutex.RUnlock()
@@ -90,7 +89,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 	}
 
 	for _, patch := range patchList {
-		klog.V(2).Infof("[%s] OnUpdateImageString patch %+v", c.resource, patch)
+		c.logger.Infof("[%s] OnUpdateImageString patch %+v", c.resource, patch)
 
 		if !exists { // 삭제된 리소스인 경우 무시
 			return fmt.Errorf("[%s] OnUpdateImageString patch not exists key=%s", c.resource, key)
@@ -124,7 +123,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 	}
 
 	if len(Containers) == 0 && len(InitContainers) == 0 { // 변경된 이미지가 없는 경우 무시
-		klog.V(2).Infof("[%s] OnUpdateImageString patch containers not changed %+v", c.resource, patchList)
+		c.logger.Infof("[%s] OnUpdateImageString patch containers not changed %+v", c.resource, patchList)
 		return nil
 	}
 
@@ -140,7 +139,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 		return fmt.Errorf("[%s] OnUpdateImageString patch apply error namespace=%s, name=%s, patchString=%s, err=%s", c.resource, namespace, name, patchString, err)
 	}
 
-	klog.Warningf("[%s] OnUpdateImageString patch apply success namespace=%s, name=%s, patchString=%s", c.resource, namespace, name, patchString)
+	c.logger.Warningf("[%s] OnUpdateImageString patch apply success namespace=%s, name=%s, patchString=%s", c.resource, namespace, name, patchString)
 	return nil
 
 }
@@ -176,7 +175,7 @@ func (c *Controller) patchUpdateNotifyList() {
 
 	for key, patchList := range patchMap {
 		if err := c.applyPatchList(key, patchList); err != nil {
-			klog.Error(err)
+			c.logger.Errorf(err.Error()) // just logging
 		}
 	}
 

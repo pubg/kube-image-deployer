@@ -5,10 +5,13 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/pubg/kube-image-deployer/imageNotifier"
+	"github.com/pubg/kube-image-deployer/logger"
 	"github.com/pubg/kube-image-deployer/remoteRegistry/docker"
 	"github.com/pubg/kube-image-deployer/watcher"
 	appV1 "k8s.io/api/apps/v1"
@@ -33,13 +36,64 @@ var (
 	controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
 	controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
 	imageDefaultPlatform     = *flag.String("image-default-platform", "linux/amd64", "default platform for docker images")
+	slackWebhook             = *flag.String("slack-webhook", "", "slack webhook url. If empty, notifications are disabled")
+	slackMsgPrefix           = *flag.String("slack-msg-prefix", "["+getHostname()+"]", "slack message prefix. default=[hostname]")
 )
+
+func getHostname() string {
+	if s, err := os.Hostname(); err == nil {
+		return s
+	}
+	return "unknown"
+}
 
 func init() {
 	klog.InitFlags(nil)
 	flag.Parse()
-
 	klog.Infof("Starting pid: %d", os.Getpid())
+	godotenv.Load(".env")
+
+	if os.Getenv("KUBECONFIG_PATH") != "" {
+		kubeconfig = os.Getenv("KUBECONFIG_PATH")
+	}
+	if os.Getenv("OFF_DEPLOYMENTS") != "" {
+		offDeployments = true
+	}
+	if os.Getenv("OFF_STATEFULSETS") != "" {
+		offStatefulsets = true
+	}
+	if os.Getenv("OFF_DAEMONSETS") != "" {
+		offDaemonsets = true
+	}
+	if os.Getenv("OFF_CRONJOBS") != "" {
+		offCronjobs = true
+	}
+	if os.Getenv("IMAGE_HASH_CACHE_TTL_SEC") != "" {
+		if v, err := strconv.ParseUint(os.Getenv("IMAGE_HASH_CACHE_TTL_SEC"), 10, 32); err == nil {
+			imageStringCacheTTLSec = uint(v)
+		}
+	}
+	if os.Getenv("IMAGE_CHECK_INTERVAL_SEC") != "" {
+		if v, err := strconv.ParseUint(os.Getenv("IMAGE_CHECK_INTERVAL_SEC"), 10, 32); err == nil {
+			imageCheckIntervalSec = uint(v)
+		}
+	}
+	if os.Getenv("CONTROLLER_WATCH_KEY") != "" {
+		controllerWatchKey = os.Getenv("CONTROLLER_WATCH_KEY")
+	}
+	if os.Getenv("CONTROLLER_WATCH_NAMESPACE") != "" {
+		controllerWatchNamespace = os.Getenv("CONTROLLER_WATCH_NAMESPACE")
+	}
+	if os.Getenv("IMAGE_DEFAULT_PLATFORM") != "" {
+		imageDefaultPlatform = os.Getenv("IMAGE_DEFAULT_PLATFORM")
+	}
+	if os.Getenv("SLACK_WEBHOOK") != "" {
+		slackWebhook = os.Getenv("SLACK_WEBHOOK")
+	}
+	if os.Getenv("SLACK_MSG_PREFIX") != "" {
+		slackMsgPrefix = os.Getenv("SLACK_MSG_PREFIX")
+	}
+
 	klog.Infof("Config Flags: %v", map[string]interface{}{
 		"kubeconfig":               kubeconfig,
 		"offDeployments":           offDeployments,
@@ -50,6 +104,8 @@ func init() {
 		"imageCheckIntervalSec":    imageCheckIntervalSec,
 		"controllerWatchKey":       controllerWatchKey,
 		"controllerWatchNamespace": controllerWatchNamespace,
+		"slackWebhook":             slackWebhook,
+		"slackMsgPrefix":           slackMsgPrefix,
 	})
 }
 
@@ -87,10 +143,16 @@ func NewClientset() *kubernetes.Clientset {
 }
 
 func runWatchers(stopCh chan struct{}) {
-	clientset := NewClientset()                                                                    // create a clientset
-	remoteRegistry := docker.NewRemoteRegistry().WithDefaultPlatform(imageDefaultPlatform)         // create a docker remote registry
-	imageNotifier := imageNotifier.NewImageNotifier(stopCh, remoteRegistry, imageCheckIntervalSec) // create a imageNotifier
-	optionsModifier := func(options *metaV1.ListOptions) {                                         // optionsModifier selector
+	logger := logger.NewLogger()
+
+	if slackWebhook != "" {
+		logger.WithSlack(stopCh, slackWebhook, slackMsgPrefix)
+	}
+
+	clientset := NewClientset()                                                                                       // create a clientset
+	remoteRegistry := docker.NewRemoteRegistry().WithDefaultPlatform(imageDefaultPlatform).WithLogger(logger)         // create a docker remote registry
+	imageNotifier := imageNotifier.NewImageNotifier(stopCh, remoteRegistry, imageCheckIntervalSec).WithLogger(logger) // create a imageNotifier
+	optionsModifier := func(options *metaV1.ListOptions) {                                                            // optionsModifier selector
 		options.LabelSelector = controllerWatchKey
 	}
 
@@ -99,7 +161,7 @@ func runWatchers(stopCh chan struct{}) {
 			_, err := clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("deployments", stopCh, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "deployments", controllerWatchNamespace, optionsModifier), &appV1.Deployment{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		go watcher.NewWatcher("deployments", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "deployments", controllerWatchNamespace, optionsModifier), &appV1.Deployment{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 
 	if !offStatefulsets { // statefulsets watcher
@@ -107,7 +169,7 @@ func runWatchers(stopCh chan struct{}) {
 			_, err := clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("statefulsets", stopCh, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "statefulsets", controllerWatchNamespace, optionsModifier), &appV1.StatefulSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		go watcher.NewWatcher("statefulsets", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "statefulsets", controllerWatchNamespace, optionsModifier), &appV1.StatefulSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 
 	if !offDaemonsets { // daemonsets watcher
@@ -115,7 +177,7 @@ func runWatchers(stopCh chan struct{}) {
 			_, err := clientset.AppsV1().DaemonSets(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("daemonsets", stopCh, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "daemonsets", controllerWatchNamespace, optionsModifier), &appV1.DaemonSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		go watcher.NewWatcher("daemonsets", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "daemonsets", controllerWatchNamespace, optionsModifier), &appV1.DaemonSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 
 	if !offCronjobs { // cronjobs watcher
@@ -123,7 +185,7 @@ func runWatchers(stopCh chan struct{}) {
 			_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("cronjobs", stopCh, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		go watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 }
 

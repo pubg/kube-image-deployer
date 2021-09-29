@@ -14,3 +14,9 @@ type IImageNotifier interface {
 type IRemoteRegistry interface {
 	GetImageString(url, tag, platformString string) (string, error)
 }
+
+type ILogger interface {
+	Infof(format string, args ...interface{})
+	Errorf(format string, args ...interface{})
+	Warningf(format string, args ...interface{})
+}

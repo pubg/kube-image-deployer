@@ -3,6 +3,7 @@ package watcher
 import (
 	"github.com/pubg/kube-image-deployer/controller"
 	"github.com/pubg/kube-image-deployer/interfaces"
+	l "github.com/pubg/kube-image-deployer/logger"
 	pkgRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -13,27 +14,28 @@ type ApplyStrategicMergePatch = controller.ApplyStrategicMergePatch
 func NewWatcher(
 	name string,
 	stop chan struct{},
+	logger interfaces.ILogger,
 	listWatcher cache.ListerWatcher,
 	objType pkgRuntime.Object,
 	imageNotifier interfaces.IImageNotifier,
 	controllerWatchKey string,
 	applyStrategicMergePatch ApplyStrategicMergePatch,
 ) {
-	controller := createDefaultController(name, stop, listWatcher, objType, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
-	NewWatcherWithController(stop, controller)
+	controller := createDefaultController(name, stop, logger, listWatcher, objType, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+	RunController(stop, controller)
 }
 
-func NewWatcherWithController(
+func RunController(
 	stop chan struct{},
 	controller interfaces.IController,
 ) {
-	go controller.Run(1, stop) // Let's start the controller
-	<-stop
+	controller.Run(1, stop) // Let's start the controller
 }
 
 func createDefaultController(
 	name string,
 	stop chan struct{},
+	logger interfaces.ILogger,
 	listWatcher cache.ListerWatcher,
 	objType pkgRuntime.Object,
 	imageNotifier interfaces.IImageNotifier,
@@ -80,6 +82,11 @@ func createDefaultController(
 		Informer:                 informer,
 		ImageNotifier:            imageNotifier,
 		ControllerWatchKey:       controllerWatchKey,
+		Logger:                   logger,
+	}
+
+	if controllerOpt.Logger == nil {
+		controllerOpt.Logger = l.NewLogger()
 	}
 
 	controller := controller.NewController(controllerOpt)

@@ -7,59 +7,60 @@ import (
 	appV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
 	coreV1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 )
 
-func GetAnnotations(obj interface{}) map[string]string {
+func GetAnnotations(obj interface{}) (map[string]string, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return obj.(*appV1.Deployment).Annotations
+		return obj.(*appV1.Deployment).Annotations, nil
 	case *appV1.StatefulSet:
-		return obj.(*appV1.StatefulSet).Annotations
+		return obj.(*appV1.StatefulSet).Annotations, nil
 	case *appV1.DaemonSet:
-		return obj.(*appV1.DaemonSet).Annotations
+		return obj.(*appV1.DaemonSet).Annotations, nil
 	case *batchV1.CronJob:
-		return obj.(*batchV1.CronJob).Annotations
+		return obj.(*batchV1.CronJob).Annotations, nil
 	default:
-		klog.Errorf("GetAnnotations unknown type %T", t)
-		return make(map[string]string)
+		return make(map[string]string), fmt.Errorf("GetAnnotations unknown type %T", t)
 	}
 }
 
-func GetContainers(obj interface{}) []coreV1.Container {
+func GetContainers(obj interface{}) ([]coreV1.Container, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return obj.(*appV1.Deployment).Spec.Template.Spec.Containers
+		return obj.(*appV1.Deployment).Spec.Template.Spec.Containers, nil
 	case *appV1.StatefulSet:
-		return obj.(*appV1.StatefulSet).Spec.Template.Spec.Containers
+		return obj.(*appV1.StatefulSet).Spec.Template.Spec.Containers, nil
 	case *appV1.DaemonSet:
-		return obj.(*appV1.DaemonSet).Spec.Template.Spec.Containers
+		return obj.(*appV1.DaemonSet).Spec.Template.Spec.Containers, nil
 	case *batchV1.CronJob:
-		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers
+		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers, nil
 	default:
-		klog.Errorf("GetContainers unknown type %T", t)
-		return make([]coreV1.Container, 0)
+		return make([]coreV1.Container, 0), fmt.Errorf("GetContainers unknown type %T", t)
 	}
 }
 
-func GetInitContainers(obj interface{}) []coreV1.Container {
+func GetInitContainers(obj interface{}) ([]coreV1.Container, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return obj.(*appV1.Deployment).Spec.Template.Spec.InitContainers
+		return obj.(*appV1.Deployment).Spec.Template.Spec.InitContainers, nil
 	case *appV1.StatefulSet:
-		return obj.(*appV1.StatefulSet).Spec.Template.Spec.InitContainers
+		return obj.(*appV1.StatefulSet).Spec.Template.Spec.InitContainers, nil
 	case *appV1.DaemonSet:
-		return obj.(*appV1.DaemonSet).Spec.Template.Spec.InitContainers
+		return obj.(*appV1.DaemonSet).Spec.Template.Spec.InitContainers, nil
 	case *batchV1.CronJob:
-		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.InitContainers
+		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
 	default:
-		klog.Errorf("GetInitContainers unknown type %T", t)
-		return make([]coreV1.Container, 0)
+		return make([]coreV1.Container, 0), fmt.Errorf("GetInitContainers unknown type %T", t)
 	}
 }
 
 func GetContainerByName(obj interface{}, name string) (coreV1.Container, error) {
-	containers := GetContainers(obj)
+	containers, err := GetContainers(obj)
+
+	if err != nil {
+		return coreV1.Container{}, err
+	}
+
 	for _, container := range containers {
 		if container.Name == name {
 			return container, nil
@@ -69,7 +70,12 @@ func GetContainerByName(obj interface{}, name string) (coreV1.Container, error) 
 }
 
 func GetInitContainerByName(obj interface{}, name string) (coreV1.Container, error) {
-	containers := GetInitContainers(obj)
+	containers, err := GetInitContainers(obj)
+
+	if err != nil {
+		return coreV1.Container{}, err
+	}
+
 	for _, container := range containers {
 		if container.Name == name {
 			return container, nil
