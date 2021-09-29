@@ -12,13 +12,13 @@ import (
 func GetAnnotations(obj interface{}) (map[string]string, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return obj.(*appV1.Deployment).Annotations, nil
+		return t.Annotations, nil
 	case *appV1.StatefulSet:
-		return obj.(*appV1.StatefulSet).Annotations, nil
+		return t.Annotations, nil
 	case *appV1.DaemonSet:
-		return obj.(*appV1.DaemonSet).Annotations, nil
+		return t.Annotations, nil
 	case *batchV1.CronJob:
-		return obj.(*batchV1.CronJob).Annotations, nil
+		return t.Annotations, nil
 	default:
 		return make(map[string]string), fmt.Errorf("GetAnnotations unknown type %T", t)
 	}
@@ -27,13 +27,13 @@ func GetAnnotations(obj interface{}) (map[string]string, error) {
 func GetContainers(obj interface{}) ([]coreV1.Container, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return obj.(*appV1.Deployment).Spec.Template.Spec.Containers, nil
+		return t.Spec.Template.Spec.Containers, nil
 	case *appV1.StatefulSet:
-		return obj.(*appV1.StatefulSet).Spec.Template.Spec.Containers, nil
+		return t.Spec.Template.Spec.Containers, nil
 	case *appV1.DaemonSet:
-		return obj.(*appV1.DaemonSet).Spec.Template.Spec.Containers, nil
+		return t.Spec.Template.Spec.Containers, nil
 	case *batchV1.CronJob:
-		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers, nil
+		return t.Spec.JobTemplate.Spec.Template.Spec.Containers, nil
 	default:
 		return make([]coreV1.Container, 0), fmt.Errorf("GetContainers unknown type %T", t)
 	}
@@ -42,13 +42,13 @@ func GetContainers(obj interface{}) ([]coreV1.Container, error) {
 func GetInitContainers(obj interface{}) ([]coreV1.Container, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return obj.(*appV1.Deployment).Spec.Template.Spec.InitContainers, nil
+		return t.Spec.Template.Spec.InitContainers, nil
 	case *appV1.StatefulSet:
-		return obj.(*appV1.StatefulSet).Spec.Template.Spec.InitContainers, nil
+		return t.Spec.Template.Spec.InitContainers, nil
 	case *appV1.DaemonSet:
-		return obj.(*appV1.DaemonSet).Spec.Template.Spec.InitContainers, nil
+		return t.Spec.Template.Spec.InitContainers, nil
 	case *batchV1.CronJob:
-		return obj.(*batchV1.CronJob).Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
+		return t.Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
 	default:
 		return make([]coreV1.Container, 0), fmt.Errorf("GetInitContainers unknown type %T", t)
 	}
