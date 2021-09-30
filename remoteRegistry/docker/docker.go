@@ -8,6 +8,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pubg/kube-image-deployer/interfaces"
+	"github.com/pubg/kube-image-deployer/logger"
 	"github.com/pubg/kube-image-deployer/util"
 )
 
@@ -15,6 +17,7 @@ type RemoteRegistryDocker struct {
 	imageAuthMap    map[string]authn.Authenticator
 	defaultPlatform *v1.Platform
 	cache           *util.Cache
+	logger          interfaces.ILogger
 }
 
 // NewRemoteRegistry returns a new RemoteRegistryDocker
@@ -23,8 +26,14 @@ func NewRemoteRegistry() *RemoteRegistryDocker {
 		imageAuthMap:    make(map[string]authn.Authenticator),
 		cache:           util.NewCache(60),
 		defaultPlatform: &v1.Platform{OS: "linux", Architecture: "amd64"},
+		logger:          logger.NewLogger(),
 	}
 
+	return d
+}
+
+func (d *RemoteRegistryDocker) WithLogger(logger interfaces.ILogger) *RemoteRegistryDocker {
+	d.logger = logger
 	return d
 }
 
@@ -69,7 +78,7 @@ func (d *RemoteRegistryDocker) getAuthenticator(url string) authn.Authenticator 
 	}
 
 	if isECR(url) { // image가 ecr private repository 인 경우
-		return NewECRAuthenticator(url)
+		return NewECRAuthenticator(url, d.logger)
 	}
 
 	return nil

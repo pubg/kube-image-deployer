@@ -7,17 +7,22 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/pubg/kube-image-deployer/interfaces"
 	"github.com/pubg/kube-image-deployer/util"
-	"k8s.io/klog/v2"
 )
 
 type ECRAuthenticator struct {
 	url    string
 	region string
+	logger interfaces.ILogger
 }
 
-func getRegionFromECRURL(url string) string {
-	return isECRRegex.FindStringSubmatch(url)[1]
+func NewECRAuthenticator(url string, logger interfaces.ILogger) *ECRAuthenticator {
+	return &ECRAuthenticator{
+		url:    url,
+		region: getRegionFromECRURL(url),
+		logger: logger,
+	}
 }
 
 func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
@@ -27,10 +32,10 @@ func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 		sess := session.Must(session.NewSessionWithOptions(session.Options{}))
 		svc := ecr.New(sess, aws.NewConfig().WithRegion(e.region))
 		if token, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{}); err != nil {
-			klog.Errorf("ECRAuthenticator GetAuthorizationToken error url=%s, err=%v", e.url, err)
+			e.logger.Errorf("ECRAuthenticator GetAuthorizationToken error url=%s, err=%v", e.url, err)
 			return nil, err
 		} else {
-			klog.V(4).Infof("ECRAuthenticator GetAuthorizationToken success url=%s, token=%v", e.url, token)
+			e.logger.Infof("ECRAuthenticator GetAuthorizationToken success url=%s, token=%v", e.url, token)
 			return *token.AuthorizationData[0].AuthorizationToken, nil
 		}
 	})
@@ -56,9 +61,6 @@ func isECR(url string) bool {
 	return isECRRegex.Match([]byte(url))
 }
 
-func NewECRAuthenticator(url string) *ECRAuthenticator {
-	return &ECRAuthenticator{
-		url:    url,
-		region: getRegionFromECRURL(url),
-	}
+func getRegionFromECRURL(url string) string {
+	return isECRRegex.FindStringSubmatch(url)[1]
 }

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pubg/kube-image-deployer/interfaces"
-	"k8s.io/klog/v2"
 
 	pkgRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -24,6 +23,7 @@ type Controller struct {
 	informer                 cache.Controller
 	imageNotifier            interfaces.IImageNotifier
 	applyStrategicMergePatch ApplyStrategicMergePatch
+	logger                   interfaces.ILogger
 
 	syncedImages      map[Image]bool
 	syncedImagesMutex sync.RWMutex
@@ -45,6 +45,7 @@ type ControllerOpt struct {
 	ImageNotifier            interfaces.IImageNotifier
 	ApplyStrategicMergePatch ApplyStrategicMergePatch
 	ControllerWatchKey       string
+	Logger                   interfaces.ILogger
 }
 
 // NewController creates a new Controller.
@@ -58,6 +59,7 @@ func NewController(opt ControllerOpt) *Controller {
 		imageNotifier:              opt.ImageNotifier,
 		applyStrategicMergePatch:   opt.ApplyStrategicMergePatch,
 		watchKey:                   opt.ControllerWatchKey,
+		logger:                     opt.Logger,
 		syncedImages:               make(map[Image]bool),
 		syncedImagesMutex:          sync.RWMutex{},
 		imageUpdateNotifyList:      make([]imageUpdateNotify, 0),
@@ -95,7 +97,7 @@ func (c *Controller) handleErr(err error, key interface{}) {
 
 	// This controller retries 5 times if something goes wrong. After that, it stops trying.
 	if c.queue.NumRequeues(key) < 5 {
-		klog.V(2).Infof("[%s] Error syncing %v: %v", c.resource, key, err)
+		c.logger.Infof("[%s] Error syncing %v: %v", c.resource, key, err)
 
 		// Re-enqueue the key rate limited. Based on the rate limiter on the
 		// queue and the re-enqueue history, the key will be processed later again.
@@ -106,7 +108,7 @@ func (c *Controller) handleErr(err error, key interface{}) {
 	c.queue.Forget(key)
 	// Report to an external entity that, even after several retries, we could not successfully process this key
 	runtime.HandleError(err)
-	klog.V(2).Infof("[%s] Dropping out of the queue: key:%q, err:%v", c.resource, key, err)
+	c.logger.Infof("[%s] Dropping out of the queue: key:%q, err:%v", c.resource, key, err)
 }
 
 // Run begins watching and syncing.
@@ -115,7 +117,7 @@ func (c *Controller) Run(workers int, stopCh chan struct{}) {
 
 	// Let the workers stop when we are done
 	defer c.queue.ShutDown()
-	klog.V(2).Infof("[%s] Starting controller", c.resource)
+	c.logger.Infof("[%s] Starting controller", c.resource)
 
 	go c.informer.Run(stopCh)
 
@@ -132,7 +134,7 @@ func (c *Controller) Run(workers int, stopCh chan struct{}) {
 	go wait.Until(c.patchUpdateNotifyList, time.Second, stopCh)
 
 	<-stopCh
-	klog.V(2).Infof("[%s] Stopping controller", c.resource)
+	c.logger.Infof("[%s] Stopping controller", c.resource)
 }
 
 func (c *Controller) GetReresourceName() string {
