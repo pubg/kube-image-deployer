@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/pubg/kube-image-deployer/util"
@@ -20,22 +19,6 @@ type imageUpdateNotify struct {
 	url         string
 	tag         string
 	imageString string
-}
-
-type Container struct {
-	Name  string `json:"name"`
-	Image string `json:"image"`
-}
-
-type ImageStrategicPatch struct {
-	Spec struct {
-		Template struct {
-			Spec struct {
-				Containers     []Container `json:"containers,omitempty"`
-				InitContainers []Container `json:"initContainers,omitempty"`
-			} `json:"spec"`
-		} `json:"template"`
-	} `json:"spec"`
 }
 
 func (c *Controller) getPatchMapByUpdates(updates []imageUpdateNotify) map[string][]patch {
@@ -74,9 +57,8 @@ func (c *Controller) getPatchMapByUpdates(updates []imageUpdateNotify) map[strin
 
 func (c *Controller) applyPatchList(key string, patchList []patch) error {
 
-	imageStrategicPatch := ImageStrategicPatch{}
-	Containers := make([]Container, 0)
-	InitContainers := make([]Container, 0)
+	Containers := make([]util.Container, 0)
+	InitContainers := make([]util.Container, 0)
 	namespace, name := util.GetNamespaceNameByKey(key)
 
 	if namespace == "" || name == "" {
@@ -109,7 +91,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 
 			// 이미지 변경 체크
 			if currentContainer.Image != patch.imageString {
-				container := Container{
+				container := util.Container{
 					Name:  patch.containerName,
 					Image: patch.imageString,
 				}
@@ -127,9 +109,7 @@ func (c *Controller) applyPatchList(key string, patchList []patch) error {
 		return nil
 	}
 
-	imageStrategicPatch.Spec.Template.Spec.Containers = Containers
-	imageStrategicPatch.Spec.Template.Spec.InitContainers = InitContainers
-	patchString, err := json.Marshal(imageStrategicPatch)
+	patchString, err := util.GetImageStrategicPatchJson(obj, Containers, InitContainers)
 
 	if err != nil {
 		return fmt.Errorf("[%s] OnUpdateImageString patch marshal error %+v, err=%s", c.resource, patchList, err)
