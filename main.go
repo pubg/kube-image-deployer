@@ -15,6 +15,7 @@ import (
 	"github.com/pubg/kube-image-deployer/remoteRegistry/docker"
 	"github.com/pubg/kube-image-deployer/watcher"
 	appV1 "k8s.io/api/apps/v1"
+	batchV1 "k8s.io/api/batch/v1"
 	batchV1beta1 "k8s.io/api/batch/v1beta1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +32,7 @@ var (
 	offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
 	offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
 	offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
+	useCronJobV1             = *flag.Bool("use-cronjob-v1", false, "use cronjob version v1 instead of v1beta1")
 	imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
 	imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
 	controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
@@ -68,6 +70,9 @@ func init() {
 	if os.Getenv("OFF_CRONJOBS") != "" {
 		offCronjobs = true
 	}
+	if os.Getenv("USE_CRONJOB_V1") != "" {
+		useCronJobV1 = true
+	}
 	if os.Getenv("IMAGE_HASH_CACHE_TTL_SEC") != "" {
 		if v, err := strconv.ParseUint(os.Getenv("IMAGE_HASH_CACHE_TTL_SEC"), 10, 32); err == nil {
 			imageStringCacheTTLSec = uint(v)
@@ -100,6 +105,7 @@ func init() {
 		"offStatefulsets":          offStatefulsets,
 		"offDaemonsets":            offDaemonsets,
 		"offCronjobs":              offCronjobs,
+		"useCronJobV1":             useCronJobV1,
 		"imageStringCacheTTLSec":   imageStringCacheTTLSec,
 		"imageCheckIntervalSec":    imageCheckIntervalSec,
 		"controllerWatchKey":       controllerWatchKey,
@@ -181,11 +187,19 @@ func runWatchers(stopCh chan struct{}) {
 	}
 
 	if !offCronjobs { // cronjobs watcher
-		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-			_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
-			return err
+		if useCronJobV1 {
+			applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
+				_, err := clientset.BatchV1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+				return err
+			}
+			go watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		} else {
+			applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
+				_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+				return err
+			}
+			go watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 		}
-		go watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
 	}
 }
 

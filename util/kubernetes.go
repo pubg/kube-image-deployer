@@ -1,13 +1,46 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	appV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
+	batchV1Beta1 "k8s.io/api/batch/v1beta1"
 	coreV1 "k8s.io/api/core/v1"
 )
+
+type Container struct {
+	Name  string `json:"name"`
+	Image string `json:"image"`
+}
+
+type ImageStrategicPatch struct {
+	Spec struct {
+		Template struct {
+			Spec struct {
+				Containers     []Container `json:"containers,omitempty"`
+				InitContainers []Container `json:"initContainers,omitempty"`
+			} `json:"spec"`
+		} `json:"template"`
+	} `json:"spec"`
+}
+
+type ImageStrategicPatchCronJob struct {
+	Spec struct {
+		JobTemplate struct {
+			Spec struct {
+				Template struct {
+					Spec struct {
+						Containers     []Container `json:"containers,omitempty"`
+						InitContainers []Container `json:"initContainers,omitempty"`
+					} `json:"spec"`
+				} `json:"template"`
+			} `json:"spec"`
+		} `json:"jobTemplate"`
+	} `json:"spec"`
+}
 
 func GetAnnotations(obj interface{}) (map[string]string, error) {
 	switch t := obj.(type) {
@@ -16,6 +49,8 @@ func GetAnnotations(obj interface{}) (map[string]string, error) {
 	case *appV1.StatefulSet:
 		return t.Annotations, nil
 	case *appV1.DaemonSet:
+		return t.Annotations, nil
+	case *batchV1Beta1.CronJob:
 		return t.Annotations, nil
 	case *batchV1.CronJob:
 		return t.Annotations, nil
@@ -32,6 +67,8 @@ func GetContainers(obj interface{}) ([]coreV1.Container, error) {
 		return t.Spec.Template.Spec.Containers, nil
 	case *appV1.DaemonSet:
 		return t.Spec.Template.Spec.Containers, nil
+	case *batchV1Beta1.CronJob:
+		return t.Spec.JobTemplate.Spec.Template.Spec.Containers, nil
 	case *batchV1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.Spec.Containers, nil
 	default:
@@ -47,6 +84,8 @@ func GetInitContainers(obj interface{}) ([]coreV1.Container, error) {
 		return t.Spec.Template.Spec.InitContainers, nil
 	case *appV1.DaemonSet:
 		return t.Spec.Template.Spec.InitContainers, nil
+	case *batchV1Beta1.CronJob:
+		return t.Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
 	case *batchV1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
 	default:
@@ -90,4 +129,25 @@ func GetNamespaceNameByKey(key string) (namespace string, name string) {
 		return arr[0], arr[1]
 	}
 	return
+}
+
+func GetImageStrategicPatchJson(obj interface{}, containers, initContainers []Container) ([]byte, error) {
+	var imageStrategicPatch interface{}
+
+	switch obj.(type) {
+	case *batchV1Beta1.CronJob:
+		imageStrategicPatch := ImageStrategicPatchCronJob{}
+		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
+		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+	case *batchV1.CronJob:
+		imageStrategicPatch := ImageStrategicPatchCronJob{}
+		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
+		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+	default:
+		imageStrategicPatch := ImageStrategicPatch{}
+		imageStrategicPatch.Spec.Template.Spec.Containers = containers
+		imageStrategicPatch.Spec.Template.Spec.InitContainers = initContainers
+	}
+	patchJson, err := json.Marshal(imageStrategicPatch)
+	return patchJson, err
 }
