@@ -136,17 +136,20 @@ func GetImageStrategicPatchJson(obj interface{}, containers, initContainers []Co
 
 	switch obj.(type) {
 	case *batchV1Beta1.CronJob:
-		imageStrategicPatch := ImageStrategicPatchCronJob{}
-		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
-		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+		p := ImageStrategicPatchCronJob{}
+		p.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
+		p.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+		imageStrategicPatch = p
 	case *batchV1.CronJob:
-		imageStrategicPatch := ImageStrategicPatchCronJob{}
-		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
-		imageStrategicPatch.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+		p := ImageStrategicPatchCronJob{}
+		p.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
+		p.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+		imageStrategicPatch = p
 	default:
-		imageStrategicPatch := ImageStrategicPatch{}
-		imageStrategicPatch.Spec.Template.Spec.Containers = containers
-		imageStrategicPatch.Spec.Template.Spec.InitContainers = initContainers
+		p := ImageStrategicPatch{}
+		p.Spec.Template.Spec.Containers = containers
+		p.Spec.Template.Spec.InitContainers = initContainers
+		imageStrategicPatch = p
 	}
 	patchJson, err := json.Marshal(imageStrategicPatch)
 	return patchJson, err
