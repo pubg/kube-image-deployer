@@ -101,6 +101,9 @@ spec:
         - name: busybox-init
           image: busybox # change to busybox@sha:b862520da7361ea093806d292ce355188ae83f21e8e3b2a3ce4dbdba0a230f83
 ```
+# Using kube-image-deployer as [CLI](cli/readme.md)
+See : [kube-image-deployer-cli](cli/readme.md)
+
 # Install in Kubernetes
 See : [docs/install-in-kubernetes.md](docs/install-in-kubernetes.md)
 
