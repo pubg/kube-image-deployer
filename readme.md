@@ -101,6 +101,11 @@ spec:
         - name: busybox-init
           image: busybox # change to busybox@sha:b862520da7361ea093806d292ce355188ae83f21e8e3b2a3ce4dbdba0a230f83
 ```
+# Install in Kubernetes
+See : [docs/install-in-kubernetes.md](docs/install-in-kubernetes.md)
+
+# Use with Pulumi
+See : [docs/use-with-pulumi.md](docs/use-with-pulumi.md)
 
 # Private Repositories
 kube-image-deployer는 Docker Creds로 기본 접근 권한을 획득합니다.

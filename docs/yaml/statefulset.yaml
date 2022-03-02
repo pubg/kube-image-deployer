@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kube-image-deployer
+  namespace: kube-image-deployer
+  labels:
+    app: kube-image-deployer
+    name: kube-image-deployer
+  annotations: {}
+spec:
+  replicas: 1 # fixed
+  selector:
+    matchLabels:
+      app: kube-image-deployer
+      name: kube-image-deployer
+  template:
+    metadata:
+      labels:
+        app: kube-image-deployer
+        name: kube-image-deployer
+      annotations: {}
+    spec:
+      containers:
+        - name: kube-image-deployer
+          image: ghcr.io/pubg/kube-image-deployer:v0.1.2
+          env:
+            - name: SLACK_MSG_PREFIX
+              value: '' # prefix for slack message
+            - name: SLACK_WEBHOOK
+              value: '' # your slack webhook url
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: dockerconfig
+              readOnly: true
+              mountPath: /root/.docker # ~/.docker/config.json
+          imagePullPolicy: Always
+      volumes:
+        - name: dockerconfig
+          secret:
+            secretName: kube-image-deployer
+            items:
+              - key: .dockerconfigjson
+                path: config.json  # ~/.docker/config.json
+            defaultMode: 420
+      restartPolicy: Always
+      serviceAccountName: kube-image-deployer
+      serviceAccount: kube-image-deployer
+      securityContext: {}
+  serviceName: kube-image-deployer
+  updateStrategy:
+    type: RollingUpdate
