@@ -60,6 +60,8 @@ func (c *Controller) getImagesFromCurrentWorkload(obj interface{}, key string) (
 
 		if !strings.HasPrefix(annotationKey, c.watchKey+"/") { // prefix check
 			continue
+		} else if strings.Contains(annotationValue, "@") { // ignore when annotationValue contains @ because it already has image hash
+			continue
 		}
 
 		keys := strings.SplitN(annotationKey, "/", 2)
