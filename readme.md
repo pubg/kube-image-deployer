@@ -1,16 +1,15 @@
 # kube-image-deployer
 
-kube-image-deployer는 Docker Registry의 Image:Tag를 감시하는 Kubernetes Controller입니다.
+kube-image-deployer is a Kubernetes controller that monitors Docker Registry Image:Tag.
 
-Keel과 유사하지만 단일 태그만 감시하며 더 간결하게 동작합니다.
+It is similar to Keel, but only monitors a single tag and operates more concisely.
 
-Container, InitContainer를 모두 감시합니다.
-
-현재 지원되는 Workload는 다음과 같습니다.
+It monitors both Container and InitContainer. Currently supported Workloads are:
  * deployment
  * statefulset
  * daemonset
  * cronjob
+
 
 # Available Environment Flags
 ```go
@@ -46,20 +45,20 @@ SLACK_WEBHOOK=<slack webhook url. If empty, notifications are disabled>
 SLACK_MSG_PREFIX=<slack message prefix. default=[hostname]>
 ```
 
-# 동작 방식
-* kube-image-deployer label을 가진 Workload를 감시 대상으로 등록 합니다.
-* Workload의 annotation을 읽어 감시할 Image와 Container를 매핑합니다.
-* 1분 간격(imageStringCacheTTLSec)으로 Docker Registry API v2로 이미지 정보와 이미지의 Digest Hash를 획득해 해당 사용중인 Workload의 Container에 Strategic Merge Patch를 진행합니다.
-* Image Digest Hash로 패치하기 때문에 새 태그만 추가되고 이미지 Hash가 변경되지 않은 경우는 Workload가 재배포 되지 않습니다. (의도됨)
+# How it works
+* Registers workloads with the "kube-image-deployer" label as targets for monitoring.
+* Reads the workload's annotations to map the images and containers to be monitored.
+* Acquires image information and image Digest Hash from Docker Registry API v2 at a 1-minute interval (imageStringCacheTTLSec), and performs a Strategic Merge Patch on the workload's containers.
+* Because the patch is performed using the Image Digest Hash, the workload will not be redeployed if only the new tag is added and the image hash remains unchanged (intended).
 
 # Kubernetes Yaml Examples
-## Yaml 필수 구성 요소
+## Required Yaml Configuration
 * metadata.label.kube-image-deployer
-  * label을 가진 Workload를 감시하게 되므로 필수입니다.
+  * This is required because it labels the workloads that are monitored.
 * metadata.annotations.kube-image-deployer/\${containerName} = \${ImageURL}:\${Tag}
-  * 자동 업데이트를 동작시킬 컨테이너 이름과 이미지, 태그를 Annotation에 등록합니다.
+  * Registers the container name, image, and tag for automatic updates in the annotations.
 
-## Tag 감시 방식
+## Tag Monitoring Method
 * Exact match tag
   * busybox:1.34.0 -> busybox@sha256:15f840677a5e245d9ea199eb9b026b1539208a5183621dced7b469f6aa678115
 
@@ -111,20 +110,21 @@ See : [docs/install-in-kubernetes.md](docs/install-in-kubernetes.md)
 See : [docs/use-with-pulumi.md](docs/use-with-pulumi.md)
 
 # Private Repositories
-kube-image-deployer는 Docker Creds로 기본 접근 권한을 획득합니다.
+kube-image-deployer obtains basic access permission through Docker Creds.
 
-## DockerHub / Harbor의 Private Registry 이미지 감시하기
-1. Kubernetes에 Private Registry 접근용 dockerconfig Secret을 생성합니다.
-1. Auths에 URL과 접근 방법(username/password...) 입력합니다.
-1. ```/root/.docker/config.json``` 위치에 Secret Volume을 마운트합니다.
-1. kube-image-deployer는 AuthKeyChain을 통해 Creds에 마운트된 정보로 Private Registry를 접근합니다.
+## Monitoring Private Registry Images on DockerHub / Harbor
+1. Create a dockerconfig Secret for accessing the Private Registry on Kubernetes.
+1. Input the URL and access method (username/password...) in Auths.
+1. Mount the Secret Volume in the ```/root/.docker/config.json``` location.
+1. kube-image-deployer accesses the Private Registry through the information mounted in Creds using the AuthKeyChain.
 
-## ECR의 Private Registry 이미지 감시하기
-두 가지 방법이 있습니다.
-1. kube-image-deployer Service Account에 ECR 접근 권한을 가진 Role을 설정해 권한을 주는 방법 (AWS IRSA)
-1. kube-image-deployer env에 ECR 접근 가능한 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY를 입력하는 방법 (AWS AccessToken)
+## Monitoring Private Registry Images on ECR
+There are two methods:
+1. Setting a Role with ECR access permission on the kube-image-deployer Service Account (AWS IRSA)
+1. Inputting AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY that can access ECR in the kube-image-deployer env (AWS AccessToken)
 
-ECR 이미지 URL이 감지대상인 경우 kube-image-deloyer는 ECR의 GetAuthorizationToken을 호출해 Docker Auth Token을 획득하고 이 토큰을 사용해 Docker Registry API v2로 이미지 정보를 획득합니다.
+If the ECR image URL is the target of detection, kube-image-deloyer calls ECR's GetAuthorizationToken to obtain the Docker Auth Token, and uses this token to acquire image information through the Docker Registry API v2.
+
 
 # Todo
 * Add Test Code
