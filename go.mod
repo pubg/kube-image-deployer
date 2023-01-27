@@ -3,14 +3,13 @@ module github.com/pubg/kube-image-deployer
 go 1.19
 
 require (
-	github.com/aws/aws-sdk-go v1.44.158
-	github.com/google/go-containerregistry v0.12.1
+	github.com/aws/aws-sdk-go v1.44.188
+	github.com/google/go-containerregistry v0.13.0
 	github.com/joho/godotenv v1.4.0
-	k8s.io/api v0.26.0
-	k8s.io/apimachinery v0.26.0
-	k8s.io/client-go v0.26.0
-	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.80.1
+	k8s.io/api v0.26.1
+	k8s.io/apimachinery v0.26.1
+	k8s.io/client-go v0.26.1
+	k8s.io/klog/v2 v2.90.0
 )
 
 require (
@@ -33,6 +32,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
