@@ -129,13 +129,15 @@ func (c *Controller) registImage(image Image) {
 
 func (c *Controller) unregistImage(image Image) {
 
+	c.syncedImagesMutex.Lock()
+
 	if !c.syncedImages[image] { // 이미 제거된 이미지
+		c.syncedImagesMutex.Unlock()
 		return
 	}
 
 	c.logger.Infof("[%s] unregistImage image=%+v\n", c.resource, image)
 
-	c.syncedImagesMutex.Lock()
 	delete(c.syncedImages, image)
 	c.syncedImagesMutex.Unlock()
 
