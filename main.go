@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
-	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/pubg/kube-image-deployer/imageNotifier"
@@ -148,7 +148,7 @@ func NewClientset() *kubernetes.Clientset {
 	return clientset
 }
 
-func runWatchers(stopCh chan struct{}) {
+func runWatchers(ctx context.Context, stopCh chan struct{}, wg *sync.WaitGroup) {
 	logger := logger.NewLogger()
 
 	if slackWebhook != "" {
@@ -164,41 +164,62 @@ func runWatchers(stopCh chan struct{}) {
 
 	if !offDeployments { // deployments watcher
 		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-			_, err := clientset.AppsV1().Deployments(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			_, err := clientset.AppsV1().Deployments(namespace).Patch(ctx, name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("deployments", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "deployments", controllerWatchNamespace, optionsModifier), &appV1.Deployment{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			watcher.NewWatcher("deployments", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "deployments", controllerWatchNamespace, optionsModifier), &appV1.Deployment{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+
+		}()
 	}
 
 	if !offStatefulsets { // statefulsets watcher
 		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-			_, err := clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			_, err := clientset.AppsV1().StatefulSets(namespace).Patch(ctx, name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("statefulsets", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "statefulsets", controllerWatchNamespace, optionsModifier), &appV1.StatefulSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			watcher.NewWatcher("statefulsets", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "statefulsets", controllerWatchNamespace, optionsModifier), &appV1.StatefulSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		}()
 	}
 
 	if !offDaemonsets { // daemonsets watcher
 		applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-			_, err := clientset.AppsV1().DaemonSets(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+			_, err := clientset.AppsV1().DaemonSets(namespace).Patch(ctx, name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 			return err
 		}
-		go watcher.NewWatcher("daemonsets", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "daemonsets", controllerWatchNamespace, optionsModifier), &appV1.DaemonSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			watcher.NewWatcher("daemonsets", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.AppsV1().RESTClient(), "daemonsets", controllerWatchNamespace, optionsModifier), &appV1.DaemonSet{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+		}()
 	}
 
 	if !offCronjobs { // cronjobs watcher
 		if useCronJobV1 {
 			applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-				_, err := clientset.BatchV1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+				_, err := clientset.BatchV1().CronJobs(namespace).Patch(ctx, name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 				return err
 			}
-			go watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+			}()
 		} else {
 			applyStrategicMergePatch := func(namespace string, name string, data []byte) error {
-				_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(context.TODO(), name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
+				_, err := clientset.BatchV1beta1().CronJobs(namespace).Patch(ctx, name, types.StrategicMergePatchType, data, metaV1.PatchOptions{})
 				return err
 			}
-			go watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				watcher.NewWatcher("cronjobs", stopCh, logger, cache.NewFilteredListWatchFromClient(clientset.BatchV1beta1().RESTClient(), "cronjobs", controllerWatchNamespace, optionsModifier), &batchV1beta1.CronJob{}, imageNotifier, controllerWatchKey, applyStrategicMergePatch)
+			}()
 		}
 	}
 }
@@ -207,21 +228,24 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	stopCh := make(chan struct{})
-	// defer close(stop)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	// run watchers
-	runWatchers(stopCh)
+	ctx, cancelFn := context.WithCancel(context.Background())
+	defer cancelFn()
+	var wg sync.WaitGroup
+	runWatchers(ctx, stopCh, &wg)
 
 	// wait for a signal
 	go func() {
 		sig := <-sigs
 		klog.Warningf("Signal (%s) received, stopping", sig)
+		cancelFn()
 		close(stopCh)
 	}()
 
 	<-stopCh
-	<-time.After(10 * time.Second) // wait for the watchers to stop
+	wg.Wait()
 
 }
