@@ -3,7 +3,7 @@ package logger
 import (
 	"fmt"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 type Logger struct {
@@ -29,7 +29,7 @@ func (l *Logger) WithSlack(stopCh chan struct{}, webhookUrl, msgPrefix string) *
 }
 
 func (l *Logger) Infof(format string, args ...interface{}) {
-	if !klog.V(2) {
+	if !klog.V(2).Enabled() {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
