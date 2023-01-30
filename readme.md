@@ -1,15 +1,10 @@
 # kube-image-deployer
 
-kube-image-deployer is a Kubernetes controller that monitors Docker Registry Image:Tag.
+kube-image-deployer is a Kubernetes controller that closely monitors Docker Registry Image:Tag.
 
-It is similar to Keel, but only monitors a single tag and operates more concisely.
+Unlike Keel, kube-image-deployer only tracks a single tag and operates in a more straightforward manner.
 
-It monitors both Container and InitContainer. Currently supported Workloads are:
- * deployment
- * statefulset
- * daemonset
- * cronjob
-
+It observes both *Container* and *InitContainer* in supported Kubernetes Workloads such as *deployment*, *statefulset*, *daemonset*, and *cronjob*.
 
 # Available Environment Flags
 ```go
@@ -45,18 +40,18 @@ SLACK_WEBHOOK=<slack webhook url. If empty, notifications are disabled>
 SLACK_MSG_PREFIX=<slack message prefix. default=[hostname]>
 ```
 
-# How it works
-* Registers workloads with the "kube-image-deployer" label as targets for monitoring.
-* Reads the workload's annotations to map the images and containers to be monitored.
-* Acquires image information and image Digest Hash from Docker Registry API v2 at a 1-minute interval (imageStringCacheTTLSec), and performs a Strategic Merge Patch on the workload's containers.
-* Because the patch is performed using the Image Digest Hash, the workload will not be redeployed if only the new tag is added and the image hash remains unchanged (intended).
+# How it Works
+* Labels workloads with "kube-image-deployer" for monitoring.
+* Uses annotations to keep track of which images and containers need to be monitored.
+* Checks for updated image info and image digest hash from Docker registry API v2 every minute (imageStringCacheTTLSec).
+* Makes changes to the workload's containers using the image digest hash, avoiding redeployment if only the tag changes but the image hash stays the same.
 
 # Kubernetes Yaml Examples
-## Required Yaml Configuration
+## Essential YAML Configuration
 * metadata.label.kube-image-deployer
-  * This is required because it labels the workloads that are monitored.
+  * This label is necessary to identify the workloads being monitored.
 * metadata.annotations.kube-image-deployer/\${containerName} = \${ImageURL}:\${Tag}
-  * Registers the container name, image, and tag for automatic updates in the annotations.
+  * This annotation records the container name, image URL, and tag for automatic updates.
 
 ## Tag Monitoring Method
 * Exact match tag
@@ -101,29 +96,30 @@ spec:
           image: busybox # change to busybox@sha:b862520da7361ea093806d292ce355188ae83f21e8e3b2a3ce4dbdba0a230f83
 ```
 # Using kube-image-deployer as [CLI](cli)
-See : [kube-image-deployer-cli](cli)
+For more information, refer to [kube-image-deployer-cli](cli)
 
-# Install in Kubernetes
-See : [docs/install-in-kubernetes.md](docs/install-in-kubernetes.md)
+# Installing in Kubernetes
+Refer to the [Installation Guide in Kubernetes](docs/install-in-kubernetes.md) for further details.
 
-# Use with Pulumi
-See : [docs/use-with-pulumi.md](docs/use-with-pulumi.md)
+# Using with Pulumi
+For more information, refer to [docs/use-with-pulumi.md](docs/use-with-pulumi.md)
 
 # Private Repositories
-kube-image-deployer obtains basic access permission through Docker Creds.
+kube-image-deployer acquires the necessary access rights through Docker Credentials.
 
-## Monitoring Private Registry Images on DockerHub / Harbor
-1. Create a dockerconfig Secret for accessing the Private Registry on Kubernetes.
-1. Input the URL and access method (username/password...) in Auths.
-1. Mount the Secret Volume in the ```/root/.docker/config.json``` location.
-1. kube-image-deployer accesses the Private Registry through the information mounted in Creds using the AuthKeyChain.
+## Monitoring of Images in a Private Registry on DockerHub/Harbor
+1. To access the private registry on Kubernetes, create a Dockerconfig secret.
+1. Input the URL and authentication information, such as username and password, in the Auths section.
+1. Mount the secret volume at the location of ```/root/.docker/config.json```.
+1. The kube-image-deployer accesses the private registry by utilizing the mounted credentials in the Creds section, enabled by the AuthKeyChain.
 
-## Monitoring Private Registry Images on ECR
-There are two methods:
-1. Setting a Role with ECR access permission on the kube-image-deployer Service Account (AWS IRSA)
-1. Inputting AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY that can access ECR in the kube-image-deployer env (AWS AccessToken)
+## Monitoring of Images in a Private Registry on ECR
+There are two methods available:
+* Assign a role with ECR access permissions to the kube-image-deployer Service Account through AWS IRSA.
+([#1](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html), [#2](https://docs.aws.amazon.com/ko_kr/AmazonECR/latest/userguide/ECR_on_EKS.html), [#3](https://aws.amazon.com/ko/blogs/opensource/introducing-fine-grained-iam-roles-service-accounts/)).
+* Specify the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY with ECR access in the environment variables of the kube-image-deployer.
 
-If the ECR image URL is the target of detection, kube-image-deloyer calls ECR's GetAuthorizationToken to obtain the Docker Auth Token, and uses this token to acquire image information through the Docker Registry API v2.
+The kube-image-deployer automatically checks the ECR image URL by calling GetAuthorizationToken to get the Docker authentication token. With this token, it then retrieves the information about the image through the Docker Registry API v2.
 
 
 # Todo
