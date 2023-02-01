@@ -11,7 +11,7 @@ import (
 
 type ApplyStrategicMergePatch = controller.ApplyStrategicMergePatch
 
-func NewWatcher(
+func newWatcher(
 	name string,
 	stop chan struct{},
 	logger interfaces.ILogger,

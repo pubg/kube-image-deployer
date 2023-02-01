@@ -13,7 +13,6 @@ offDeployments           = *flag.Bool("off-deployments", false, "disable deploym
 offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
 offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
 offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-useCronJobV1             = *flag.Bool("use-cronjob-v1", false, "use cronjob version v1 instead of v1beta1")
 imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
 imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
 controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")

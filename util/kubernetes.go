@@ -7,7 +7,6 @@ import (
 
 	appV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
-	batchV1Beta1 "k8s.io/api/batch/v1beta1"
 	coreV1 "k8s.io/api/core/v1"
 )
 
@@ -50,8 +49,6 @@ func GetAnnotations(obj interface{}) (map[string]string, error) {
 		return t.Annotations, nil
 	case *appV1.DaemonSet:
 		return t.Annotations, nil
-	case *batchV1Beta1.CronJob:
-		return t.Annotations, nil
 	case *batchV1.CronJob:
 		return t.Annotations, nil
 	default:
@@ -67,8 +64,6 @@ func GetContainers(obj interface{}) ([]coreV1.Container, error) {
 		return t.Spec.Template.Spec.Containers, nil
 	case *appV1.DaemonSet:
 		return t.Spec.Template.Spec.Containers, nil
-	case *batchV1Beta1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.Spec.Containers, nil
 	case *batchV1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.Spec.Containers, nil
 	default:
@@ -84,8 +79,6 @@ func GetInitContainers(obj interface{}) ([]coreV1.Container, error) {
 		return t.Spec.Template.Spec.InitContainers, nil
 	case *appV1.DaemonSet:
 		return t.Spec.Template.Spec.InitContainers, nil
-	case *batchV1Beta1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
 	case *batchV1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
 	default:
@@ -135,11 +128,6 @@ func GetImageStrategicPatchJson(obj interface{}, containers, initContainers []Co
 	var imageStrategicPatch interface{}
 
 	switch obj.(type) {
-	case *batchV1Beta1.CronJob:
-		p := ImageStrategicPatchCronJob{}
-		p.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
-		p.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
-		imageStrategicPatch = p
 	case *batchV1.CronJob:
 		p := ImageStrategicPatchCronJob{}
 		p.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
