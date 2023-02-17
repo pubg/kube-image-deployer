@@ -1,10 +1,6 @@
-# Install kube-image-deployer in your kubernetes cluster
+To install kube-image-deployer in your Kubernetes cluster, you should deploy it as a StatefulSet. This pod will monitor your Kubernetes workload and perform a patch strategy when an image update is required. To enable this, the kube-image-deployer pod requires the appropriate Kubernetes service account and role binding.
 
-Install kube-image-deployer as Statefulset. The kube-image-deployer pod monitors the kubernetes workload and performs a patch strategy when an image update is required.
-
-For this, the kube-image-deployer pod needs the appropriate kubernetes service account and role binding.
-
-kube-image-deployer pod need permission to read image tags from the Docker Registry you use, and to simplify the setup, here we will inject dockerconfig into the Pod as a Volume.
+In addition, the kube-image-deployer pod needs permission to read image tags from the Docker Registry you use. To simplify the setup, you can inject dockerconfig into the Pod as a Volume. You can find sample YAML files for a Service Account, Cluster Role, Cluster Role Binding, StatefulSet, and Docker Access Secret at the links provided.
 
 # Yaml Samples
 - [Service Account](./yaml/service-account.yaml)
@@ -14,14 +10,22 @@ kube-image-deployer pod need permission to read image tags from the Docker Regis
 - [Docker Access Secret](./yaml/secrets.yaml)
   - Open the [yaml/secrets.yaml](./yaml/secrets.yaml) file and change the docker registry access permissions correctly.
 
-# Create kube-image-deployer namespace
-> kubectl create namespace kube-image-deployer
+To create the kube-image-deployer namespace, run the following command:
+```bash
+kubectl create namespace kube-image-deployer
+```
 
-# Install all yaml files
-> kubectl apply -f ./yaml
+Then, install all YAML files by running:
+```bash
+kubectl apply -f ./yaml
+```
 
-# Check the status of kube-image-deployer
-> kubectrl get pod -n kube-image-deployer
+To check the status of kube-image-deployer, run:
+```bash
+kubectrl get pod -n kube-image-deployer
+```
+
+You should see output similar to:
 ```
 NAME                    READY   STATUS    RESTARTS   AGE
 kube-image-deployer-0   1/1     Running   0          0d
