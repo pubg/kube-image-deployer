@@ -1,6 +1,8 @@
-To install kube-image-deployer in your Kubernetes cluster, you should deploy it as a StatefulSet. This pod will monitor your Kubernetes workload and perform a patch strategy when an image update is required. To enable this, the kube-image-deployer pod requires the appropriate Kubernetes service account and role binding.
+To install kube-image-deployer in your Kubernetes cluster, you should deploy it as a StatefulSet.
 
-In addition, the kube-image-deployer pod needs permission to read image tags from the Docker Registry you use. To simplify the setup, you can inject dockerconfig into the Pod as a Volume. You can find sample YAML files for a Service Account, Cluster Role, Cluster Role Binding, StatefulSet, and Docker Access Secret at the links provided.
+This pod monitors workloads in your Kubernetes cluster that have the "kube-image-deployer" label set, and deploys new images to those workloads using Strategic Merge Patch when a new image is discovered. To enable this, the kube-image-deployer pod requires the appropriate Kubernetes service account and role binding.
+
+In addition, the kube-image-deployer pod needs permission to read image tags from the Docker Registry you are using. To simplify the setup, you can inject a "dockerconfig" file into the Pod as a Volume. You can find sample YAML files for a Service Account, Cluster Role, Cluster Role Binding, StatefulSet, and Docker Access Secret at the provided links.
 
 # Yaml Samples
 - [Service Account](./yaml/service-account.yaml)
