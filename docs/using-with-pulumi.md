@@ -9,7 +9,7 @@ Here are the steps for using Pulumi transformations to avoid redeploying older c
 1. This ensures that the same container image is used in the new deployment, preventing the unnecessary redistribution of older images.
 
 ### How to use
-Here are the instructions with improvements for the 3 steps you provided:
+Here are the instructions with improvements for the 3 steps:
 1. Verify that the annotation rule for kube-image-deployer is configured correctly in Pulumi transformations:
     ```yaml
     kube-image-deployer/[container.name]: '[container.image:tagExpr]'
