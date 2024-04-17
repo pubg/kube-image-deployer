@@ -97,10 +97,10 @@ func (s *Slack) start(stopCh chan struct{}) {
 				s.mutex.Unlock()            // unlock the pool
 
 				for _, msg := range pool {
-					text += fmt.Sprintf("%s[%s][%s][%s:%d] %s\n", s.msgPrefix, msg.time.Format(time.RFC3339), msg.level, msg.file, msg.line, msg.msg)
+					text += fmt.Sprintf("```%s[%s][%s][%s:%d] %s```\n", s.msgPrefix, msg.time.Format(time.RFC3339), msg.level, msg.file, msg.line, msg.msg)
 				}
 
-				if err := s.send("```" + text + "```"); err != nil {
+				if err := s.send(text); err != nil {
 					klog.Errorf("error sending to slack: %s\n%s", err, text)
 				}
 			}
