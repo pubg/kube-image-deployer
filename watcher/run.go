@@ -29,7 +29,7 @@ type RunOptions struct {
 
 func Run(opt *RunOptions, ctx context.Context, clientset *kubernetes.Clientset, stopCh chan struct{}, wg *sync.WaitGroup, logger *logger.Logger) {
 
-	remoteRegistry := docker.NewRemoteRegistry().WithDefaultPlatform(opt.ImageDefaultPlatform).WithLogger(logger)         // create a docker remote registry
+	remoteRegistry := docker.NewRemoteRegistry().WithDefaultPlatform(opt.ImageDefaultPlatform).WithCache(opt.ImageStringCacheTTLSec).WithLogger(logger) // create a docker remote registry
 	imageNotifier := imageNotifier.NewImageNotifier(stopCh, remoteRegistry, opt.ImageCheckIntervalSec).WithLogger(logger) // create a imageNotifier
 	optionsModifier := func(options *metaV1.ListOptions) {                                                                // optionsModifier selector
 		options.LabelSelector = opt.ControllerWatchKey

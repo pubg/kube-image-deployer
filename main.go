@@ -19,18 +19,31 @@ import (
 )
 
 var (
-	kubeconfig               = *flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	offDeployments           = *flag.Bool("off-deployments", false, "disable deployments")
-	offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
-	offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
-	offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-	imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
-	imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
-	controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
-	controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
-	imageDefaultPlatform     = *flag.String("image-default-platform", "linux/amd64", "default platform for docker images")
-	slackWebhook             = *flag.String("slack-webhook", "", "slack webhook url. If empty, notifications are disabled")
-	slackMsgPrefix           = *flag.String("slack-msg-prefix", "["+getHostname()+"]", "slack message prefix. default=[hostname]")
+	flagKubeconfig               = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	flagOffDeployments           = flag.Bool("off-deployments", false, "disable deployments")
+	flagOffStatefulsets          = flag.Bool("off-statefulsets", false, "disable statefulsets")
+	flagOffDaemonsets            = flag.Bool("off-daemonsets", false, "disable daemonsets")
+	flagOffCronjobs              = flag.Bool("off-cronjobs", false, "disable cronjobs")
+	flagImageStringCacheTTLSec   = flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
+	flagImageCheckIntervalSec    = flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
+	flagControllerWatchKey       = flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
+	flagControllerWatchNamespace = flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
+	flagImageDefaultPlatform     = flag.String("image-default-platform", "linux/amd64", "default platform for docker images")
+	flagSlackWebhook             = flag.String("slack-webhook", "", "slack webhook url. If empty, notifications are disabled")
+	flagSlackMsgPrefix           = flag.String("slack-msg-prefix", "["+getHostname()+"]", "slack message prefix. default=[hostname]")
+
+	kubeconfig               string
+	offDeployments           bool
+	offStatefulsets          bool
+	offDaemonsets            bool
+	offCronjobs              bool
+	imageStringCacheTTLSec   uint
+	imageCheckIntervalSec    uint
+	controllerWatchKey       string
+	controllerWatchNamespace string
+	imageDefaultPlatform     string
+	slackWebhook             string
+	slackMsgPrefix           string
 )
 
 func getHostname() string {
@@ -45,6 +58,20 @@ func init() {
 	flag.Parse()
 	klog.Infof("Starting pid: %d", os.Getpid())
 	godotenv.Load(".env")
+
+	// flag.Parse() 이후에 역참조해야 커맨드라인 값이 반영된다
+	kubeconfig = *flagKubeconfig
+	offDeployments = *flagOffDeployments
+	offStatefulsets = *flagOffStatefulsets
+	offDaemonsets = *flagOffDaemonsets
+	offCronjobs = *flagOffCronjobs
+	imageStringCacheTTLSec = *flagImageStringCacheTTLSec
+	imageCheckIntervalSec = *flagImageCheckIntervalSec
+	controllerWatchKey = *flagControllerWatchKey
+	controllerWatchNamespace = *flagControllerWatchNamespace
+	imageDefaultPlatform = *flagImageDefaultPlatform
+	slackWebhook = *flagSlackWebhook
+	slackMsgPrefix = *flagSlackMsgPrefix
 
 	if os.Getenv("KUBECONFIG_PATH") != "" {
 		kubeconfig = os.Getenv("KUBECONFIG_PATH")

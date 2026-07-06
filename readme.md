@@ -6,20 +6,20 @@ Unlike Keel, kube-image-deployer only tracks a single tag and operates in a more
 
 It observes both the Container and InitContainer of the supported Kubernetes Workloads such as deployment, statefulset, daemonset, and cronjob.
 
-# Available Environment Flags
-```go
-kubeconfig               = *flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-offDeployments           = *flag.Bool("off-deployments", false, "disable deployments")
-offStatefulsets          = *flag.Bool("off-statefulsets", false, "disable statefulsets")
-offDaemonsets            = *flag.Bool("off-daemonsets", false, "disable daemonsets")
-offCronjobs              = *flag.Bool("off-cronjobs", false, "disable cronjobs")
-imageStringCacheTTLSec   = *flag.Uint("image-hash-cache-ttl-sec", 60, "image hash cache TTL in seconds")
-imageCheckIntervalSec    = *flag.Uint("image-check-interval-sec", 10, "image check interval in seconds")
-controllerWatchKey       = *flag.String("controller-watch-key", "kube-image-deployer", "controller watch key")
-controllerWatchNamespace = *flag.String("controller-watch-namespace", "", "controller watch namespace. If empty, watch all namespaces")
-imageDefaultPlatform     = *flag.String("image-default-platform", "linux/amd64", "default platform for docker images")
-slackWebhook             = *flag.String("slack-webhook", "", "slack webhook url. If empty, notifications are disabled")
-slackMsgPrefix           = *flag.String("slack-msg-prefix", "[$hostname]", "slack message prefix. default=[hostname]")
+# Available Command-Line Flags
+```shell
+-kubeconfig                 <string> absolute path to the kubeconfig file
+-off-deployments            <bool>   disable deployments (default false)
+-off-statefulsets           <bool>   disable statefulsets (default false)
+-off-daemonsets             <bool>   disable daemonsets (default false)
+-off-cronjobs               <bool>   disable cronjobs (default false)
+-image-hash-cache-ttl-sec   <uint>   image hash cache TTL in seconds (default 60)
+-image-check-interval-sec   <uint>   image check interval in seconds (default 10)
+-controller-watch-key       <string> controller watch key (default "kube-image-deployer")
+-controller-watch-namespace <string> controller watch namespace. If empty, watch all namespaces
+-image-default-platform     <string> default platform for docker images (default "linux/amd64")
+-slack-webhook              <string> slack webhook url. If empty, notifications are disabled
+-slack-msg-prefix           <string> slack message prefix (default "[$hostname]")
 ```
 
 # Available Environment Variables
@@ -29,7 +29,6 @@ OFF_DEPLOYMENTS=<true>
 OFF_STATEFULSETS=<true>
 OFF_DAEMONSETS=<true>
 OFF_CRONJOBS=<true>
-USE_CRONJOB_V1=<true>
 IMAGE_HASH_CACHE_TTL_SEC=<uint>
 IMAGE_CHECK_INTERVAL_SEC=<uint>
 CONTROLLER_WATCH_KEY=<kube-image-deployer>

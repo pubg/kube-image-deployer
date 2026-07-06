@@ -3,7 +3,7 @@ package interfaces
 type IController interface {
 	Run(workers int, stopCh chan struct{})
 	OnUpdateImageString(url, tag, platformString, imageString string)
-	GetReresourceName() string
+	GetResourceName() string
 }
 
 type IImageNotifier interface {

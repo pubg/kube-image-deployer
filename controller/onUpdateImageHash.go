@@ -25,11 +25,11 @@ func (c *Controller) getPatchMapByUpdates(updates []imageUpdateNotify) map[strin
 	// key 별로 kubernetes patch apply를 위한 리스트를 생성
 	patchMap := make(map[string][]patch)
 
+	c.syncedImagesMutex.RLock()
+	defer c.syncedImagesMutex.RUnlock()
+
 	for _, update := range updates {
 		c.logger.Infof("[%s] OnUpdateImageString %s, %s, %s", c.resource, update.url, update.tag, update.imageString)
-
-		c.syncedImagesMutex.RLock()
-		defer c.syncedImagesMutex.RUnlock()
 
 		for image := range c.syncedImages {
 

@@ -137,7 +137,7 @@ func (c *Controller) Run(workers int, stopCh chan struct{}) {
 	c.logger.Infof("[%s] Stopping controller", c.resource)
 }
 
-func (c *Controller) GetReresourceName() string {
+func (c *Controller) GetResourceName() string {
 	return c.resource
 }
 

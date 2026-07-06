@@ -60,7 +60,7 @@ func (r *ImageNotifier) RegistImage(controller interfaces.IController, url, tag,
 	}
 
 	// 신규
-	r.logger.Infof("[%s] RegistImage %s:%s\n", controller.GetReresourceName(), url, tag)
+	r.logger.Infof("[%s] RegistImage %s:%s\n", controller.GetResourceName(), url, tag)
 
 	imageUpdateNotify := NewImageUpdateNotify(url, tag, "", controller)
 
@@ -78,7 +78,7 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 	existsImageUpdateNotify, ok := r.list[notifyId]
 
 	if !ok { // ??
-		r.logger.Errorf("[%s] UnregistImage existsImageUpdateNotify notfound url=%s, tag=%s", controller.GetReresourceName(), url, tag)
+		r.logger.Errorf("[%s] UnregistImage existsImageUpdateNotify notfound url=%s, tag=%s", controller.GetResourceName(), url, tag)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 
 	if referenceCount <= 0 { // 이미지를 참조하는 대상이 더이상 없으면 삭제
 		delete(r.list, notifyId)
-		r.logger.Infof("[%s] UnregistImage %s:%s\n", controller.GetReresourceName(), url, tag)
+		r.logger.Infof("[%s] UnregistImage %s:%s\n", controller.GetResourceName(), url, tag)
 	}
 
 }
@@ -94,7 +94,7 @@ func (r *ImageNotifier) UnregistImage(controller interfaces.IController, url, ta
 func (r *ImageNotifier) checkImageUpdate(image checkImage) {
 	imageString, err := r.remoteRegistry.GetImageString(image.url, image.tag, "")
 	if err != nil {
-		r.logger.Errorf("[%s] checkImageUpdate %s:%s err=%s\n", image.controller.GetReresourceName(), image.url, image.tag, err)
+		r.logger.Errorf("[%s] checkImageUpdate %s:%s err=%s\n", image.controller.GetResourceName(), image.url, image.tag, err)
 		return
 	}
 
