@@ -21,17 +21,25 @@ The CLI is part of the root Go module and always builds against the current proj
 
       The CLI returns the image digest hash in the format `<image>@<hash>`.
 
+## Output contract
+
+- On success the CLI prints the digest line to **stdout** and writes **nothing to stderr** (library logs are suppressed by default since v0.2.1), so callers can safely treat any stderr output as part of a failure.
+- On failure the CLI exits with a non-zero code and writes an `error: ...` message to stderr.
+- Use `--verbose` to re-enable library (klog) logs on stderr for debugging.
+
 You can use the --platform flag to specify the platform of the image. The default value is linux/amd64.
 
 You can also run `build/kube-image-deployer-cli --help` to see the available flags and their usage.
 
 ```bash
 build/kube-image-deployer-cli --help
-Usage of build/kube-image-deployer-cli:
+Usage of kube-image-deployer-cli:
   -image string
         image url
   -platform string
         platform string (default "linux/amd64")
   -tag string
         tag
+  -verbose
+        print library logs (klog) to stderr for debugging
 ```

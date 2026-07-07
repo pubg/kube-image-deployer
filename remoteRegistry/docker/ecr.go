@@ -52,7 +52,8 @@ func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 			return nil, err
 		}
 
-		e.logger.Infof("ECRAuthenticator GetAuthorizationToken success url=%s", e.url)
+		// 토큰 갱신 성공은 루틴 동작이므로 klog에만 남긴다 (Slack 미러 제외)
+		e.logger.Debugf("ECRAuthenticator GetAuthorizationToken success url=%s", e.url)
 		return *token.AuthorizationData[0].AuthorizationToken, nil
 	})
 
