@@ -143,13 +143,32 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 
 }
 
-// getImageHighestVersionTag 와일드카드 태그에서 최고 버전 태그를 찾아 digest와 함께 반환한다.
-func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformString string) (interfaces.ResolvedImage, error) {
-	options := d.getRemoteOptions(url)
+// getTags 저장소의 전체 태그 목록을 조회한다. 같은 저장소를 여러 태그 패턴이
+// 감시할 때 패턴마다 목록 전체(태그 수천 개면 페이지네이션 수 회)를 다시 받지
+// 않도록 저장소 단위로 캐시한다. 태그 목록은 platform과 무관하다.
+func (d *RemoteRegistryDocker) getTags(url string) ([]string, error) {
+
 	repo, err := name.NewRepository(url)
-	if nil != err {
-		return interfaces.ResolvedImage{}, err
+	if err != nil {
+		return nil, err
 	}
+
+	tags, err := d.cache.Get("tags/list???"+url, func() (any, error) {
+		return remote.List(repo, d.getRemoteOptions(url)...)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tags.([]string), nil
+
+}
+
+// getImageHighestVersionTag 와일드카드 태그에서 최고 버전 태그를 찾아 digest와 함께 반환한다.
+// 해석 결과 캐시와 태그 목록 캐시가 같은 TTL로 독립 갱신되므로,
+// 해석 결과가 반영하는 태그 목록의 나이는 최악의 경우 TTL의 2배까지일 수 있다.
+func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformString string) (interfaces.ResolvedImage, error) {
 
 	platform, err := d.parsePlatform(platformString)
 
@@ -159,7 +178,7 @@ func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformStrin
 
 	cacheKey := url + "___" + tag + "?platform=" + platform.String()
 	image, err := d.cache.Get(cacheKey, func() (any, error) {
-		tags, err := remote.List(repo, options...)
+		tags, err := d.getTags(url)
 		if nil != err {
 			return nil, err
 		}
