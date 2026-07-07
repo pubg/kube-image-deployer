@@ -42,11 +42,18 @@ func NewSlackNotifier(webhookUrl, clusterName string, windowSec uint) *SlackNoti
 // 전송 실패는 로그만 남긴다 (best-effort — 다음 윈도우가 곧 온다).
 func (n *SlackNotifier) Notify(summary Summary) {
 	blocks := BuildBlocks(summary, n.clusterName, n.windowSec, time.Now())
-	for _, page := range paginateBlocks(blocks) {
+	pages := paginateBlocks(blocks)
+	sent := 0
+	for _, page := range pages {
 		if err := n.send(page); err != nil {
 			klog.Errorf("slack image update notify error: %v", err)
+			continue
 		}
+		sent++
 	}
+	// 발송 여부를 파드 로그로 확인할 수 있도록 성공도 klog에 남긴다 (Slack 미러 아님)
+	klog.Infof("slack image update notify sent: images=%d workloads=%d containers=%d pages=%d/%d",
+		summary.TotalImages, summary.TotalWorkloads, summary.TotalContainers, sent, len(pages))
 }
 
 func (n *SlackNotifier) send(blocks []map[string]any) error {

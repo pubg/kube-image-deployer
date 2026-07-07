@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
@@ -14,6 +15,7 @@ import (
 
 type ECRAuthenticator struct {
 	url    string
+	host   string // 레지스트리 호스트 (aws_account_id.dkr.ecr.region.amazonaws.com)
 	region string
 	logger interfaces.ILogger
 }
@@ -21,40 +23,51 @@ type ECRAuthenticator struct {
 func NewECRAuthenticator(url string, logger interfaces.ILogger) *ECRAuthenticator {
 	return &ECRAuthenticator{
 		url:    url,
+		host:   strings.SplitN(url, "/", 2)[0],
 		region: getRegionFromECRURL(url),
 		logger: logger,
 	}
 }
 
+// fetchECRAuthorizationToken 실제 ECR GetAuthorizationToken 호출. 테스트에서 대체한다.
+var fetchECRAuthorizationToken = func(region string) (string, error) {
+
+	ctx := context.Background()
+
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		return "", err
+	}
+
+	svc := ecr.NewFromConfig(cfg)
+	token, err := svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+
+	if err != nil {
+		return "", err
+	}
+
+	if len(token.AuthorizationData) == 0 || token.AuthorizationData[0].AuthorizationToken == nil {
+		return "", fmt.Errorf("empty AuthorizationData")
+	}
+
+	return *token.AuthorizationData[0].AuthorizationToken, nil
+}
+
 func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 
-	token, err := ecrCache.Get(e.url, func() (any, error) {
+	// 토큰은 레지스트리(계정+리전) 단위로 유효하므로 저장소가 달라도 host 단위로 공유한다
+	token, err := ecrCache.Get(e.host, func() (any, error) {
 
-		ctx := context.Background()
-
-		cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(e.region))
-		if err != nil {
-			e.logger.Errorf("ECRAuthenticator LoadDefaultConfig error url=%s, err=%v", e.url, err)
-			return nil, err
-		}
-
-		svc := ecr.NewFromConfig(cfg)
-		token, err := svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+		token, err := fetchECRAuthorizationToken(e.region)
 
 		if err != nil {
-			e.logger.Errorf("ECRAuthenticator GetAuthorizationToken error url=%s, err=%v", e.url, err)
-			return nil, err
-		}
-
-		if len(token.AuthorizationData) == 0 || token.AuthorizationData[0].AuthorizationToken == nil {
-			err := fmt.Errorf("empty AuthorizationData url=%s", e.url)
-			e.logger.Errorf("ECRAuthenticator GetAuthorizationToken %v", err)
+			e.logger.Errorf("ECRAuthenticator GetAuthorizationToken error host=%s, err=%v", e.host, err)
 			return nil, err
 		}
 
 		// 토큰 갱신 성공은 루틴 동작이므로 klog에만 남긴다 (Slack 미러 제외)
-		e.logger.Debugf("ECRAuthenticator GetAuthorizationToken success url=%s", e.url)
-		return *token.AuthorizationData[0].AuthorizationToken, nil
+		e.logger.Debugf("ECRAuthenticator GetAuthorizationToken success host=%s", e.host)
+		return token, nil
 	})
 
 	if err != nil {
