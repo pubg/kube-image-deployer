@@ -19,7 +19,7 @@ var ErrNotFound = errors.New("not found")
 func GetHighestVersionWithFilter(versions []string, filter string) (string, error) {
 	highestTag := ""
 	highestNumbers := []int64{}
-	regexString := fmt.Sprintf("^%s$", strings.Replace(regexp.QuoteMeta(filter), `\*`, `(\d+)`, -1))
+	regexString := fmt.Sprintf("^%s$", strings.ReplaceAll(regexp.QuoteMeta(filter), `\*`, `(\d+)`))
 	patt, err := regexp.Compile(regexString)
 
 	if nil != err {
@@ -34,23 +34,27 @@ func GetHighestVersionWithFilter(versions []string, filter string) (string, erro
 		}
 
 		numbers := []int64{}
+		valid := true
 
 		for idx, match := range matches {
 			if idx == 0 { // 첫번째 매치는 무시한다.
 				continue
 			}
 			if number, err := strconv.ParseInt(match, 10, 64); err != nil {
-				return "", err
+				valid = false // int64 범위를 벗어나는 비정상 태그는 건너뛴다
+				break
 			} else {
 				numbers = append(numbers, number)
 			}
 		}
 
-		for idx, number := range numbers { // 각 자릿수를 비교해 더 큰 값이 발견되면 교체
-			if idx >= len(highestNumbers) || highestNumbers[idx] <= number {
-				highestTag, highestNumbers = tag, numbers
-				break
-			}
+		if !valid {
+			continue
+		}
+
+		// 왼쪽 자릿수부터 사전식 비교: 크면 교체, 작으면 유지, 같으면 다음 자릿수로
+		if highestTag == "" || compareNumbers(numbers, highestNumbers) > 0 {
+			highestTag, highestNumbers = tag, numbers
 		}
 	}
 
@@ -59,4 +63,25 @@ func GetHighestVersionWithFilter(versions []string, filter string) (string, erro
 	}
 
 	return highestTag, nil
+}
+
+// compareNumbers 두 버전 자릿수 배열을 사전식으로 비교한다.
+// a > b이면 1, a < b이면 -1, 같으면 0을 반환한다.
+func compareNumbers(a, b []int64) int {
+	for i := 0; i < len(a) && i < len(b); i++ {
+		if a[i] > b[i] {
+			return 1
+		}
+		if a[i] < b[i] {
+			return -1
+		}
+	}
+	// 앞자리가 모두 같으면 자릿수가 많은 쪽을 더 높은 버전으로 본다
+	if len(a) > len(b) {
+		return 1
+	}
+	if len(a) < len(b) {
+		return -1
+	}
+	return 0
 }

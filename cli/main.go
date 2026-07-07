@@ -1,8 +1,11 @@
+// kube-image-deployer-cli 주어진 image:tag의 digest hash를 조회하는 CLI.
+// 루트 모듈(github.com/pubg/kube-image-deployer)의 remoteRegistry를 직접 참조한다.
 package main
 
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	docker "github.com/pubg/kube-image-deployer/remoteRegistry/docker"
 )
@@ -24,16 +27,17 @@ func main() {
 
 	if image == "" || tag == "" {
 		flag.Usage()
-		return
+		os.Exit(2)
 	}
 
 	registry := docker.NewRemoteRegistry()
-	s, err := registry.GetImageString(image, tag, "linux/amd64")
+	resolved, err := registry.GetImageString(image, tag, platformString)
 
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "error: %s\n", err)
+		os.Exit(1)
 	}
 
-	fmt.Printf("%s\n", s)
+	fmt.Printf("%s\n", resolved.ImageString)
 
 }

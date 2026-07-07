@@ -5,12 +5,15 @@ BUILDDIR ?= $(CURDIR)/build
 ldflags := -w -s
 BUILD_FLAGS := -ldflags '$(ldflags)' -trimpath
 
-.PHONY: all kube-image-deployer test
+.PHONY: all kube-image-deployer kube-image-deployer-cli test
 
-all: kube-image-deployer
+all: kube-image-deployer kube-image-deployer-cli
 
 kube-image-deployer:
 	@go build -mod=readonly $(BUILD_FLAGS) -o $(BUILDDIR)/kube-image-deployer ./main.go
+
+kube-image-deployer-cli:
+	@go build -mod=readonly $(BUILD_FLAGS) -o $(BUILDDIR)/kube-image-deployer-cli ./cli
 
 test:
 	@TEST_DOCKER_ECR_SKIP=1 TEST_DOCKER_PRIVATE_SKIP=1 go test ./...

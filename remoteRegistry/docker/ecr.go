@@ -1,11 +1,12 @@
 package docker
 
 import (
+	"context"
+	"fmt"
 	"regexp"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/pubg/kube-image-deployer/interfaces"
 	"github.com/pubg/kube-image-deployer/util"
@@ -27,17 +28,32 @@ func NewECRAuthenticator(url string, logger interfaces.ILogger) *ECRAuthenticato
 
 func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 
-	token, err := ecrCache.Get(e.url, func() (interface{}, error) {
+	token, err := ecrCache.Get(e.url, func() (any, error) {
 
-		sess := session.Must(session.NewSessionWithOptions(session.Options{}))
-		svc := ecr.New(sess, aws.NewConfig().WithRegion(e.region))
-		if token, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{}); err != nil {
+		ctx := context.Background()
+
+		cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(e.region))
+		if err != nil {
+			e.logger.Errorf("ECRAuthenticator LoadDefaultConfig error url=%s, err=%v", e.url, err)
+			return nil, err
+		}
+
+		svc := ecr.NewFromConfig(cfg)
+		token, err := svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+
+		if err != nil {
 			e.logger.Errorf("ECRAuthenticator GetAuthorizationToken error url=%s, err=%v", e.url, err)
 			return nil, err
-		} else {
-			e.logger.Infof("ECRAuthenticator GetAuthorizationToken success url=%s, token=%v", e.url, token)
-			return *token.AuthorizationData[0].AuthorizationToken, nil
 		}
+
+		if len(token.AuthorizationData) == 0 || token.AuthorizationData[0].AuthorizationToken == nil {
+			err := fmt.Errorf("empty AuthorizationData url=%s", e.url)
+			e.logger.Errorf("ECRAuthenticator GetAuthorizationToken %v", err)
+			return nil, err
+		}
+
+		e.logger.Infof("ECRAuthenticator GetAuthorizationToken success url=%s", e.url)
+		return *token.AuthorizationData[0].AuthorizationToken, nil
 	})
 
 	if err != nil {
@@ -51,7 +67,7 @@ func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 	return c, nil
 }
 
-//aws_account_id.dkr.ecr.region.amazonaws.com
+// aws_account_id.dkr.ecr.region.amazonaws.com
 var isECRRegex = regexp.MustCompile(`\d+\.dkr\.ecr\.(.+)\.amazonaws.com`)
 var ecrCache = util.NewCache(60 * 60 * 11) // 11 hours
 
