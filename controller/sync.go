@@ -28,25 +28,30 @@ func (c *Controller) syncKey(key string) error {
 		for image := range prevImages {
 			c.unregistImage(image)
 		}
-	} else { // workload 생성 / 변경
-		images := c.getImagesFromCurrentWorkload(obj, key)
-		for image := range images {
-			if !prevImages[image] { // 신규 추가 이미지
-				c.registImage(image)
-			}
-		}
-		for image := range prevImages { // 이전에 등록된 이미지가 삭제된 경우 해제
-			if !images[image] {
-				c.unregistImage(image)
-			}
+		return nil
+	}
+
+	// workload 생성 / 변경
+	images := c.getImagesFromCurrentWorkload(obj, key)
+	for image := range images {
+		if !prevImages[image] { // 신규 추가 이미지
+			c.registImage(image)
 		}
 	}
-	return nil
+	for image := range prevImages { // 이전에 등록된 이미지가 삭제된 경우 해제
+		if !images[image] {
+			c.unregistImage(image)
+		}
+	}
+
+	// desired imageString과 현재 workload 상태를 비교해 패치 적용.
+	// 실패 시 에러를 반환해 workqueue가 백오프와 함께 재시도하게 한다.
+	return c.reconcileWorkload(key, images)
 }
 
 // getImagesFromAnnotationValue key에서 kubernetes workload의 변경 감지 대상 이미지 추출
 // kube-image-deployer/containerName=image:tag
-func (c *Controller) getImagesFromCurrentWorkload(obj interface{}, key string) (images map[Image]bool) {
+func (c *Controller) getImagesFromCurrentWorkload(obj any, key string) (images map[Image]bool) {
 
 	images = make(map[Image]bool)
 	annotations, err := util.GetAnnotations(obj)
@@ -71,13 +76,15 @@ func (c *Controller) getImagesFromCurrentWorkload(obj interface{}, key string) (
 
 		containerName := keys[1]
 
-		arr := strings.Split(annotationValue, ":")
-		if len(arr) == 2 {
+		// registry.example.com:5000/app:1.0 처럼 URL에 포트가 포함될 수 있으므로
+		// 마지막 콜론을 기준으로 url과 tag를 분리한다.
+		// 콜론 뒤에 /가 있으면 태그가 아니라 포트 구분자이므로 무시한다 (태그 누락 케이스).
+		if idx := strings.LastIndex(annotationValue, ":"); idx > 0 && idx < len(annotationValue)-1 && !strings.Contains(annotationValue[idx+1:], "/") {
 			image := Image{
 				key:           key,
 				containerName: containerName,
-				url:           arr[0],
-				tag:           arr[1],
+				url:           annotationValue[:idx],
+				tag:           annotationValue[idx+1:],
 			}
 			images[image] = true
 		}
@@ -118,12 +125,13 @@ func (c *Controller) registImage(image Image) {
 		c.syncedImagesMutex.Unlock()
 		return
 	} else {
-		c.logger.Infof("[%s] registImage image=%+v\n", c.resource, image)
+		c.logger.Debugf("[%s] registImage image=%+v\n", c.resource, image)
 		c.syncedImages[image] = true
 		c.syncedImagesMutex.Unlock()
 	}
 
-	go c.imageNotifier.RegistImage(c, image.url, image.tag, "") // 이미지 변경 감지 등록
+	// 이미지 변경 감지 등록. 동기 호출로 등록/해제 순서를 보장한다.
+	c.imageNotifier.RegistImage(c, image.url, image.tag, "")
 
 }
 
@@ -136,11 +144,28 @@ func (c *Controller) unregistImage(image Image) {
 		return
 	}
 
-	c.logger.Infof("[%s] unregistImage image=%+v\n", c.resource, image)
+	c.logger.Debugf("[%s] unregistImage image=%+v\n", c.resource, image)
 
 	delete(c.syncedImages, image)
+
+	// 같은 url:tag를 참조하는 workload가 더 없으면 desired 상태도 정리한다.
+	// (남겨두면 이후 재등록 시 오래된 digest로 잘못 패치될 수 있다)
+	remains := false
+	for synced := range c.syncedImages {
+		if synced.url == image.url && synced.tag == image.tag {
+			remains = true
+			break
+		}
+	}
 	c.syncedImagesMutex.Unlock()
 
-	go c.imageNotifier.UnregistImage(c, image.url, image.tag, "") // 이미지 변경 감지 해제
+	if !remains {
+		c.desiredImagesMutex.Lock()
+		delete(c.desiredImages, imageKey{url: image.url, tag: image.tag})
+		c.desiredImagesMutex.Unlock()
+	}
+
+	// 이미지 변경 감지 해제. 동기 호출로 등록/해제 순서를 보장한다.
+	c.imageNotifier.UnregistImage(c, image.url, image.tag, "")
 
 }

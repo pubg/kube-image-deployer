@@ -56,6 +56,6 @@ func TestGetImageFromPrivateRegistry(t *testing.T) {
 	if s, err := r.GetImageString(privateenv.host+"/"+privateenv.image, privateenv.tag, "linux/amd64"); err != nil {
 		t.Fatalf("err: %v", err)
 	} else {
-		t.Logf("success: %s", s)
+		t.Logf("success: %+v", s)
 	}
 }

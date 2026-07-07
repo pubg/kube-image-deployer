@@ -28,7 +28,7 @@ func NewECRAuthenticator(url string, logger interfaces.ILogger) *ECRAuthenticato
 
 func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 
-	token, err := ecrCache.Get(e.url, func() (interface{}, error) {
+	token, err := ecrCache.Get(e.url, func() (any, error) {
 
 		ctx := context.Background()
 
@@ -67,7 +67,7 @@ func (e *ECRAuthenticator) Authorization() (*authn.AuthConfig, error) {
 	return c, nil
 }
 
-//aws_account_id.dkr.ecr.region.amazonaws.com
+// aws_account_id.dkr.ecr.region.amazonaws.com
 var isECRRegex = regexp.MustCompile(`\d+\.dkr\.ecr\.(.+)\.amazonaws.com`)
 var ecrCache = util.NewCache(60 * 60 * 11) // 11 hours
 

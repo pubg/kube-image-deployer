@@ -57,16 +57,22 @@ func (d *RemoteRegistryDocker) WithDefaultPlatform(platformString string) *Remot
 	return d
 }
 
-// GetImage returns a docker image digest hash from url:tag
-func (d *RemoteRegistryDocker) GetImageString(url, tag, platformString string) (string, error) {
+// GetImageString url:tag의 digest hash와 그 digest가 취득된 원본 태그를 반환한다.
+func (d *RemoteRegistryDocker) GetImageString(url, tag, platformString string) (interfaces.ResolvedImage, error) {
 
 	if strings.Contains(tag, "*") {
 		// *을 포함하는 경우 전체 tag에서 가장 높은 tag를 찾아 반환한다.
 		return d.getImageHighestVersionTag(url, tag, platformString)
-	} else {
-		// 단일 tag인 경우 가장 최신 sha256 digest를 반환한다. digest의 경우 platform이 필요하다.
-		return d.getImageDigestHash(url, tag, platformString)
 	}
+
+	// 단일 tag인 경우 가장 최신 sha256 digest를 반환한다. digest의 경우 platform이 필요하다.
+	imageString, err := d.getImageDigestHash(url, tag, platformString)
+
+	if err != nil {
+		return interfaces.ResolvedImage{}, err
+	}
+
+	return interfaces.ResolvedImage{ImageString: imageString, Tag: tag}, nil
 }
 
 func (d *RemoteRegistryDocker) getAuthenticator(url string) authn.Authenticator {
@@ -114,7 +120,10 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 		return "", err
 	}
 
-	hash, err := d.cache.Get(fullUrl, func() (interface{}, error) {
+	// platform 별로 digest가 다르므로 캐시 키에 platform을 포함한다
+	cacheKey := fullUrl + "?platform=" + platform.String()
+
+	hash, err := d.cache.Get(cacheKey, func() (any, error) {
 		if img, err := remote.Image(ref, options...); err == nil {
 			if digest, err := img.Digest(); err == nil {
 				return digest.String(), nil
@@ -126,37 +135,54 @@ func (d *RemoteRegistryDocker) getImageDigestHash(url, tag, platformString strin
 		}
 	})
 
-	return url + "@" + hash.(string), err
-
-}
-
-func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformString string) (string, error) {
-	options := d.getRemoteOptions(url)
-	repo, err := name.NewRepository(url)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 
-	cacheKey := url + "___" + tag
-	image, err := d.cache.Get(cacheKey, func() (interface{}, error) {
+	return url + "@" + hash.(string), nil
+
+}
+
+// getImageHighestVersionTag 와일드카드 태그에서 최고 버전 태그를 찾아 digest와 함께 반환한다.
+func (d *RemoteRegistryDocker) getImageHighestVersionTag(url, tag, platformString string) (interfaces.ResolvedImage, error) {
+	options := d.getRemoteOptions(url)
+	repo, err := name.NewRepository(url)
+	if nil != err {
+		return interfaces.ResolvedImage{}, err
+	}
+
+	platform, err := d.parsePlatform(platformString)
+
+	if err != nil {
+		return interfaces.ResolvedImage{}, err
+	}
+
+	cacheKey := url + "___" + tag + "?platform=" + platform.String()
+	image, err := d.cache.Get(cacheKey, func() (any, error) {
 		tags, err := remote.List(repo, options...)
 		if nil != err {
-			return "", err
+			return nil, err
 		}
 
 		t, err := util.GetHighestVersionWithFilter(tags, tag)
 		if nil != err {
-			return "", err
+			return nil, err
 		}
 
-		return d.getImageDigestHash(url, t, platformString)
+		imageString, err := d.getImageDigestHash(url, t, platformString)
+		if nil != err {
+			return nil, err
+		}
+
+		// digest가 어느 태그에서 취득되었는지 함께 보존한다 (알림 표기에 사용)
+		return interfaces.ResolvedImage{ImageString: imageString, Tag: t}, nil
 	})
 
 	if nil != err {
-		return "", err
+		return interfaces.ResolvedImage{}, err
 	}
 
-	return image.(string), nil
+	return image.(interfaces.ResolvedImage), nil
 }
 
 func (d *RemoteRegistryDocker) parsePlatform(platformString string) (*v1.Platform, error) {

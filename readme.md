@@ -20,6 +20,10 @@ It observes both the Container and InitContainer of the supported Kubernetes Wor
 -image-default-platform     <string> default platform for docker images (default "linux/amd64")
 -slack-webhook              <string> slack webhook url. If empty, notifications are disabled
 -slack-msg-prefix           <string> slack message prefix (default "[$hostname]")
+-bind-address               <string> address for /healthz, /readyz, /metrics endpoints (default ":8080"). If empty, the http server is disabled
+-cluster-name               <string> cluster name shown in slack image update events (default $hostname)
+-slack-event-webhook        <string> slack webhook url for aggregated image update events. If empty, falls back to slack-webhook
+-slack-event-window-sec     <uint>   aggregation window in seconds for image update events (default 20, 0 = send immediately)
 ```
 
 # Available Environment Variables
@@ -36,7 +40,30 @@ CONTROLLER_WATCH_NAMESPACE=<controller watch namespace. If empty, watch all name
 IMAGE_DEFAULT_PLATFORM=<default platform for docker images>
 SLACK_WEBHOOK=<slack webhook url. If empty, notifications are disabled>
 SLACK_MSG_PREFIX=<slack message prefix. default=[hostname]>
+BIND_ADDRESS=<address for /healthz, /readyz, /metrics endpoints. default=:8080>
+CLUSTER_NAME=<cluster name shown in slack image update events. default=hostname>
+SLACK_EVENT_WEBHOOK=<slack webhook url for aggregated image update events. falls back to SLACK_WEBHOOK>
+SLACK_EVENT_WINDOW_SEC=<aggregation window in seconds for image update events. default=20, 0=send immediately>
 ```
+
+# Slack Notifications
+Two independent channels of Slack delivery:
+
+* **Error/Warning logs** — mirrored to `SLACK_WEBHOOK` as preformatted log lines (unchanged behavior).
+* **Image update events** — when a patch is applied, a structured event is collected for
+  `SLACK_EVENT_WINDOW_SEC` (default 20s) and sent as **one aggregated Block Kit message**
+  (`SLACK_EVENT_WEBHOOK`, falling back to `SLACK_WEBHOOK`). Even if dozens of workloads rotate
+  during a deploy wave, the channel receives a single summary **grouped by image** — one entry per
+  image showing the watched `url:tag`, the resolved tag and digest, and every workload it was
+  applied to: `` `/api:release-*` → `release-1102 (@sha256:bbbbbbbbbbbb)` `` followed by
+  `└ namespace · kind/name (containers)` lines.
+  The `CLUSTER_NAME` is shown in the header so multiple clusters can share one channel.
+  Patch success details are logged to klog only (not mirrored to Slack).
+
+# Health Check & Metrics
+* `GET /healthz` : liveness probe (always `200 ok` while the process is running)
+* `GET /readyz` : readiness probe (`200 ok` once all informer caches are synced, `503` before that)
+* `GET /metrics` : Prometheus metrics (`kube_image_deployer_image_check_total`, `kube_image_deployer_image_update_notify_total`, `kube_image_deployer_patch_total`, `kube_image_deployer_watched_images`)
 
 # Functionality
 * Registers workloads with the "kube-image-deployer" label as targets for monitoring.
@@ -108,7 +135,7 @@ kube-image-deployer acquires the necessary access rights through Docker Credenti
 ## Monitoring Images on a Private Registry on DockerHub/Harbor
 1. To access the private registry on Kubernetes, create a Dockerconfig secret.
 1. Input the URL and authentication information such as the username and password in the Auths section.
-1. Mount the secret volume at the location of `/root/.docker/config.json`.
+1. Mount the secret volume at the location of `/home/kube-image-deployer/.docker/config.json` (the container runs as a non-root user and reads the path pointed to by `$DOCKER_CONFIG`).
 1. kube-image-deployer accesses the private registry using the mounted credentials in the Creds section, enabled by the AuthKeyChain.
 
 ## Monitoring Images on a Private Registry on ECR

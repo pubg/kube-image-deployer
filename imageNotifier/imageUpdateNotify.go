@@ -10,16 +10,20 @@ type ImageUpdateNotify struct {
 	url            string
 	tag            string
 	platform       string
-	controller     interfaces.IController
+	listener       interfaces.IImageListener
 	referenceCount int32
+
+	// lastImageString 마지막으로 통지한 imageString.
+	// 체크 사이클은 겹치지 않으므로(WaitGroup) 체크 goroutine에서만 접근한다.
+	lastImageString string
 }
 
-func NewImageUpdateNotify(url, tag, platform string, controller interfaces.IController) *ImageUpdateNotify {
+func NewImageUpdateNotify(url, tag, platform string, listener interfaces.IImageListener) *ImageUpdateNotify {
 	return &ImageUpdateNotify{
 		url:            url,
 		tag:            tag,
 		platform:       platform,
-		controller:     controller,
+		listener:       listener,
 		referenceCount: 1,
 	}
 }

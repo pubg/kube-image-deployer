@@ -6,13 +6,13 @@ metadata:
     app: kube-image-deployer
     name: kube-image-deployer
   annotations: {}
+# 최소 권한: 컨트롤러는 workload에 대해 get/list/watch/patch만 사용한다
 rules:
   - verbs:
       - get
       - list
       - watch
       - patch
-      - update
     apiGroups:
       - apps
     resources:
@@ -24,16 +24,7 @@ rules:
       - list
       - watch
       - patch
-      - update
     apiGroups:
       - batch
     resources:
       - cronjobs
-  - verbs:
-      - get
-      - list
-      - watch
-    apiGroups:
-      - ''
-    resources:
-      - namespaces

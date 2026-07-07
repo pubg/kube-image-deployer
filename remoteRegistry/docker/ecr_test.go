@@ -42,6 +42,6 @@ func TestGetImageFromECR(t *testing.T) {
 	if s, err := r.GetImageString(ecrenv.host+"/"+ecrenv.image, ecrenv.tag, "linux/amd64"); err != nil {
 		t.Fatalf("err: %v, %+v", err, ecrenv)
 	} else {
-		t.Logf("success: %s", s)
+		t.Logf("success: %+v", s)
 	}
 }

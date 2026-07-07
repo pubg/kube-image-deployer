@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	appV1 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
@@ -41,52 +40,68 @@ type ImageStrategicPatchCronJob struct {
 	} `json:"spec"`
 }
 
-func GetAnnotations(obj interface{}) (map[string]string, error) {
+// workloadAdapter workload 타입별 접근 방법을 한 곳에 모은 어댑터.
+// 새 workload 타입 지원은 getWorkloadAdapter에 case 하나를 추가하면 된다.
+type workloadAdapter struct {
+	annotations map[string]string
+	podSpec     *coreV1.PodSpec
+	buildPatch  func(containers, initContainers []Container) any
+}
+
+func buildDefaultPatch(containers, initContainers []Container) any {
+	p := ImageStrategicPatch{}
+	p.Spec.Template.Spec.Containers = containers
+	p.Spec.Template.Spec.InitContainers = initContainers
+	return p
+}
+
+func buildCronJobPatch(containers, initContainers []Container) any {
+	p := ImageStrategicPatchCronJob{}
+	p.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
+	p.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
+	return p
+}
+
+func getWorkloadAdapter(obj any) (*workloadAdapter, error) {
 	switch t := obj.(type) {
 	case *appV1.Deployment:
-		return t.Annotations, nil
+		return &workloadAdapter{annotations: t.Annotations, podSpec: &t.Spec.Template.Spec, buildPatch: buildDefaultPatch}, nil
 	case *appV1.StatefulSet:
-		return t.Annotations, nil
+		return &workloadAdapter{annotations: t.Annotations, podSpec: &t.Spec.Template.Spec, buildPatch: buildDefaultPatch}, nil
 	case *appV1.DaemonSet:
-		return t.Annotations, nil
+		return &workloadAdapter{annotations: t.Annotations, podSpec: &t.Spec.Template.Spec, buildPatch: buildDefaultPatch}, nil
 	case *batchV1.CronJob:
-		return t.Annotations, nil
+		return &workloadAdapter{annotations: t.Annotations, podSpec: &t.Spec.JobTemplate.Spec.Template.Spec, buildPatch: buildCronJobPatch}, nil
 	default:
-		return make(map[string]string), fmt.Errorf("GetAnnotations unknown type %T", t)
+		return nil, fmt.Errorf("unsupported workload type %T", t)
 	}
 }
 
-func GetContainers(obj interface{}) ([]coreV1.Container, error) {
-	switch t := obj.(type) {
-	case *appV1.Deployment:
-		return t.Spec.Template.Spec.Containers, nil
-	case *appV1.StatefulSet:
-		return t.Spec.Template.Spec.Containers, nil
-	case *appV1.DaemonSet:
-		return t.Spec.Template.Spec.Containers, nil
-	case *batchV1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.Spec.Containers, nil
-	default:
-		return make([]coreV1.Container, 0), fmt.Errorf("GetContainers unknown type %T", t)
+func GetAnnotations(obj any) (map[string]string, error) {
+	adapter, err := getWorkloadAdapter(obj)
+	if err != nil {
+		return make(map[string]string), err
 	}
+	return adapter.annotations, nil
 }
 
-func GetInitContainers(obj interface{}) ([]coreV1.Container, error) {
-	switch t := obj.(type) {
-	case *appV1.Deployment:
-		return t.Spec.Template.Spec.InitContainers, nil
-	case *appV1.StatefulSet:
-		return t.Spec.Template.Spec.InitContainers, nil
-	case *appV1.DaemonSet:
-		return t.Spec.Template.Spec.InitContainers, nil
-	case *batchV1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.Spec.InitContainers, nil
-	default:
-		return make([]coreV1.Container, 0), fmt.Errorf("GetInitContainers unknown type %T", t)
+func GetContainers(obj any) ([]coreV1.Container, error) {
+	adapter, err := getWorkloadAdapter(obj)
+	if err != nil {
+		return make([]coreV1.Container, 0), err
 	}
+	return adapter.podSpec.Containers, nil
 }
 
-func GetContainerByName(obj interface{}, name string) (coreV1.Container, error) {
+func GetInitContainers(obj any) ([]coreV1.Container, error) {
+	adapter, err := getWorkloadAdapter(obj)
+	if err != nil {
+		return make([]coreV1.Container, 0), err
+	}
+	return adapter.podSpec.InitContainers, nil
+}
+
+func GetContainerByName(obj any, name string) (coreV1.Container, error) {
 	containers, err := GetContainers(obj)
 
 	if err != nil {
@@ -101,7 +116,7 @@ func GetContainerByName(obj interface{}, name string) (coreV1.Container, error) 
 	return coreV1.Container{}, fmt.Errorf("container %s not found", name)
 }
 
-func GetInitContainerByName(obj interface{}, name string) (coreV1.Container, error) {
+func GetInitContainerByName(obj any, name string) (coreV1.Container, error) {
 	containers, err := GetInitContainers(obj)
 
 	if err != nil {
@@ -116,29 +131,10 @@ func GetInitContainerByName(obj interface{}, name string) (coreV1.Container, err
 	return coreV1.Container{}, fmt.Errorf("initContainer %s not found", name)
 }
 
-func GetNamespaceNameByKey(key string) (namespace string, name string) {
-	arr := strings.Split(key, "/")
-	if len(arr) == 2 {
-		return arr[0], arr[1]
+func GetImageStrategicPatchJson(obj any, containers, initContainers []Container) ([]byte, error) {
+	adapter, err := getWorkloadAdapter(obj)
+	if err != nil {
+		return nil, err
 	}
-	return
-}
-
-func GetImageStrategicPatchJson(obj interface{}, containers, initContainers []Container) ([]byte, error) {
-	var imageStrategicPatch interface{}
-
-	switch obj.(type) {
-	case *batchV1.CronJob:
-		p := ImageStrategicPatchCronJob{}
-		p.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
-		p.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainers
-		imageStrategicPatch = p
-	default:
-		p := ImageStrategicPatch{}
-		p.Spec.Template.Spec.Containers = containers
-		p.Spec.Template.Spec.InitContainers = initContainers
-		imageStrategicPatch = p
-	}
-	patchJson, err := json.Marshal(imageStrategicPatch)
-	return patchJson, err
+	return json.Marshal(adapter.buildPatch(containers, initContainers))
 }

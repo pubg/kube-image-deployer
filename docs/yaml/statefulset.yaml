@@ -28,6 +28,21 @@ spec:
               value: '' # prefix for slack message
             - name: SLACK_WEBHOOK
               value: '' # your slack webhook url
+          ports:
+            - name: http
+              containerPort: 8080 # /healthz, /readyz, /metrics
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
           resources:
             limits:
               cpu: 100m
@@ -38,20 +53,29 @@ spec:
           volumeMounts:
             - name: dockerconfig
               readOnly: true
-              mountPath: /root/.docker # ~/.docker/config.json
+              mountPath: /home/kube-image-deployer/.docker # $DOCKER_CONFIG/config.json
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
       volumes:
         - name: dockerconfig
           secret:
             secretName: kube-image-deployer
             items:
               - key: .dockerconfigjson
-                path: config.json  # ~/.docker/config.json
+                path: config.json  # $DOCKER_CONFIG/config.json
             defaultMode: 420
       restartPolicy: Always
       serviceAccountName: kube-image-deployer
       serviceAccount: kube-image-deployer
-      securityContext: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
   serviceName: kube-image-deployer
   updateStrategy:
     type: RollingUpdate
